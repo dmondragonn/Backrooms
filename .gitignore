@@ -105,3 +105,10 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# macOS generated files
+.DS_Store
+.DS_Store.meta
+._*
+.AppleDouble
+.LSOverride
