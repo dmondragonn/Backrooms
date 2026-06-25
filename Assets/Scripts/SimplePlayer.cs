@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering.Universal;
 
 // Self-contained first-person controller. Put it on a Capsule, press Play, walk.
 // CharacterController = no Rigidbody, no ground LayerMask, no orientation rig.
@@ -38,6 +39,10 @@ public class SimplePlayer : MonoBehaviour
             var camComp = go.AddComponent<Camera>();
             camComp.clearFlags = CameraClearFlags.SolidColor; // black exterior, no skybox leak
             camComp.backgroundColor = Color.black;
+            camComp.farClipPlane = 42f;                       // cull distant maze (fog hides the edge)
+            var camData = camComp.GetUniversalAdditionalCameraData();
+            camData.renderPostProcessing = true;              // enable the global Volume effects
+            camData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
             go.AddComponent<AudioListener>();
             go.transform.SetParent(transform);
             go.transform.localPosition = new Vector3(0, 0.6f, 0);
