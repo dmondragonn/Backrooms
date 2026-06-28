@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "Backrooms.slnx"
+    "dotnet.defaultSolution": "Backrooms Maze.slnx"
 }

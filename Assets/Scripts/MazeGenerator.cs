@@ -3,7 +3,27 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using Unity.AI.Navigation;
 
+
+public class ElevatorButton : MonoBehaviour
+{
+    public TextMesh display;
+    public string value;
+
+    public void Press()
+    {
+        if (display != null && !string.IsNullOrEmpty(value))
+        {
+            display.text = value;
+        }
+    }
+
+    private void OnMouseDown()
+    {
+        Press();
+    }
+}
 // Generates a random 3D maze (recursive backtracker) and builds it from cube
 // primitives with backrooms-colored materials made in code. Zero setup: drop on
 // an empty GameObject and press Play. Swap colors/materials later for real art.
@@ -12,44 +32,44 @@ public class MazeGenerator : MonoBehaviour
     [Header("Grid")]
     public int width = 42;
     public int height = 42;
-    public float cellSize = 4f;     // wide cells = backrooms-style corridors
+    public float cellSize = 4f;
     public float wallHeight = 3f;
-    public int seed = 0;            // 0 = random each run
-    public bool buildCeiling = true; // uncheck to see the maze from above
-    public int ceilingTilesPerCell = 2; // drywall tile grid density per cell
-    public int buildChunkCols = 2;   // columns built per frame during generation
-    public bool spawnPlayer = true;  // auto-create the player capsule at the start cell
-    public bool elevatorIntro = true; // start inside a failing elevator that drops you in
+    public int seed = 0;
+    public bool buildCeiling = true;
+    public int ceilingTilesPerCell = 2;
+    public int buildChunkCols = 4;          // CAMBIADO: más columnas por frame = carga más rápida
+    public bool spawnPlayer = true;
+    public bool elevatorIntro = true;
 
     [Header("Wall/beam texture (optional)")]
-    public Texture2D wallTexture;                 // assign your image; set Wrap Mode = Repeat
+    public Texture2D wallTexture;
     public Vector2 wallTextureTiling = new Vector2(2f, 2f);
 
     [Header("Backrooms colors")]
-    public Color wallColor    = new Color(0.76f, 0.70f, 0.50f); // mustard wallpaper
-    public Color floorColor   = new Color(0.42f, 0.36f, 0.24f); // damp carpet
-    public Color ceilingColor = new Color(0.85f, 0.82f, 0.70f); // pale tiles
-    public Color lightColor   = new Color(1f, 0.97f, 0.85f);    // warm fluorescent
+    public Color wallColor    = new Color(0.76f, 0.70f, 0.50f);
+    public Color floorColor   = new Color(0.42f, 0.36f, 0.24f);
+    public Color ceilingColor = new Color(0.85f, 0.82f, 0.70f);
+    public Color lightColor   = new Color(1f, 0.97f, 0.85f);
 
     [Header("Lights")]
-    public float lightSpacing = 1.5f;     // emissive lamp panels every N cells (bloom makes them glow)
-    public float realLightSpacing = 3f;   // actual point lights on a coarser grid (perf)
+    public float lightSpacing = 1.5f;
+    public float realLightSpacing = 3f;
     public float lightIntensity = 1.8f;
-    public float lightRange = 12f;  // covers the coarser light grid
+    public float lightRange = 12f;
 
-    [Header("Rooms (open areas with pillars)")]
+    [Header("Rooms")]
     public int roomCount = 6;
-    public int roomMaxSize = 4;     // up to N x N cells, internal walls removed
+    public int roomMaxSize = 4;
     public bool addPillars = true;
 
-    [Header("Void (thin beam floors you can fall off)")]
-    [Range(0f, 1f)] public float voidRoomChance = 0.4f; // chance a room is beams-over-void instead of pillars
+    [Header("Void")]
+    [Range(0f, 1f)] public float voidRoomChance = 0.4f;
     public float beamWidth = 0.3f;
     public float beamHeight = 0.5f;
-    public float voidDepth = 8f;        // how far below the floor the catch floor sits
+    public float voidDepth = 8f;
 
     Material wallMat, floorMat, ceilMat, lightMat, darkMat, metalMat, buttonMat, panelMat, labelMat;
-    Transform geo;                 // static geometry container (mesh-combined)
+    Transform geo;
     bool[,] wallN, wallE, wallS, wallW;
     bool[,] visited;
     bool[,] isRoom, isVoid;
@@ -63,11 +83,9 @@ public class MazeGenerator : MonoBehaviour
         MakeMaterials();
         SetupPostFX();
         CarveMaze();
-        StartCoroutine(BuildRoutine());   // spread heavy geometry across frames (no load freeze)
+        StartCoroutine(BuildRoutine());
     }
 
-    // global post-processing for mood: bloom on the lamps, sickly color grade,
-    // vignette and film grain. Camera enables post + SMAA in SimplePlayer.
     void SetupPostFX()
     {
         var profile = ScriptableObject.CreateInstance<VolumeProfile>();
@@ -85,7 +103,7 @@ public class MazeGenerator : MonoBehaviour
         grade.postExposure.Override(0.2f);
         grade.contrast.Override(12f);
         grade.saturation.Override(-8f);
-        grade.colorFilter.Override(new Color(1f, 0.95f, 0.78f)); // amber wash
+        grade.colorFilter.Override(new Color(1f, 0.95f, 0.78f));
 
         var vig = profile.Add<Vignette>(true);
         vig.intensity.Override(0.38f);
@@ -103,12 +121,10 @@ public class MazeGenerator : MonoBehaviour
         v.sharedProfile = profile;
     }
 
-    // --- materials (URP Lit) made in code so it works with no asset setup ---
     void MakeMaterials()
     {
         var shader = Shader.Find("Universal Render Pipeline/Lit");
 
-        // walls: new texture (BackroomsWall2); floor + beams: old texture (BackroomsWall)
         if (wallTexture == null) wallTexture = Resources.Load<Texture2D>("BackroomsWall2");
         var floorTex = Resources.Load<Texture2D>("BackroomsWall");
 
@@ -118,31 +134,29 @@ public class MazeGenerator : MonoBehaviour
         floorMat = Lit(shader, floorColor);
         Apply(floorMat, floorTex);
 
-        ceilMat  = Lit(shader, Color.white);                  // grid texture = drywall tiles + T-bars
+        ceilMat  = Lit(shader, Color.white);
         ceilMat.mainTexture = GridTexture(ceilingColor, new Color(0.5f, 0.5f, 0.52f));
         ceilMat.mainTextureScale = new Vector2(ceilingTilesPerCell, ceilingTilesPerCell);
-        darkMat  = Lit(shader, new Color(0.02f, 0.02f, 0.02f)); // void enclosure
-        metalMat = Lit(shader, new Color(0.34f, 0.34f, 0.36f)); // elevator car (brushed steel)
+        darkMat  = Lit(shader, new Color(0.02f, 0.02f, 0.02f));
+        metalMat = Lit(shader, new Color(0.34f, 0.34f, 0.36f));
         metalMat.SetFloat("_Smoothness", 0.55f);
-        buttonMat = Lit(shader, new Color(0.62f, 0.62f, 0.64f)); // light steel buttons
+        buttonMat = Lit(shader, new Color(0.62f, 0.62f, 0.64f));
         buttonMat.SetFloat("_Smoothness", 0.4f);
-        panelMat = Lit(shader, new Color(0.48f, 0.48f, 0.50f));  // panel plate (mid steel)
+        panelMat = Lit(shader, new Color(0.48f, 0.48f, 0.50f));
         panelMat.SetFloat("_Smoothness", 0.6f);
-        // unlit (uniform panels) and HDR-bright (>1) so Bloom makes them glow
+
         lightMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         lightMat.SetColor("_BaseColor", lightColor * 2.5f);
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.03f, 0.03f, 0.035f);
 
-        // fog: atmosphere + lets the camera cull distant maze (paired with a short far clip)
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.04f, 0.04f, 0.035f);
         RenderSettings.fogStartDistance = 14f;
         RenderSettings.fogEndDistance = 38f;
 
-        // turn off the scene's sun so no exterior light leaks through wall seams
         foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
             if (l.type == LightType.Directional) l.enabled = false;
     }
@@ -150,12 +164,11 @@ public class MazeGenerator : MonoBehaviour
     void Apply(Material m, Texture2D tex)
     {
         if (tex == null) return;
-        m.mainTexture = tex;                       // URP Lit _BaseMap
+        m.mainTexture = tex;
         m.mainTextureScale = wallTextureTiling;
-        m.SetColor("_BaseColor", Color.white);     // don't tint the texture
+        m.SetColor("_BaseColor", Color.white);
     }
 
-    // one tile: pale fill with a thin border line, tiled to fake a suspended ceiling grid
     Texture2D GridTexture(Color fill, Color line)
     {
         const int S = 64, b = 2;
@@ -174,11 +187,10 @@ public class MazeGenerator : MonoBehaviour
     {
         var m = new Material(s);
         m.SetColor("_BaseColor", c);
-        m.SetFloat("_Smoothness", 0.05f); // matte, not plastic
+        m.SetFloat("_Smoothness", 0.05f);
         return m;
     }
 
-    // --- maze carving: recursive backtracker over the grid ---
     void CarveMaze()
     {
         wallN = Filled(); wallE = Filled(); wallS = Filled(); wallW = Filled();
@@ -193,7 +205,7 @@ public class MazeGenerator : MonoBehaviour
         {
             cur = stack.Peek();
             var next = UnvisitedNeighbour(cur);
-            if (next.x < 0) { stack.Pop(); continue; }   // dead end, backtrack
+            if (next.x < 0) { stack.Pop(); continue; }
 
             RemoveWallBetween(cur, next);
             visited[next.x, next.y] = true;
@@ -202,12 +214,10 @@ public class MazeGenerator : MonoBehaviour
 
         CarveRooms();
 
-        if (elevatorIntro && height > 1)                       // guarantee a north exit
+        if (elevatorIntro && height > 1)
             RemoveWallBetween(new Vector2Int(0, 0), new Vector2Int(0, 1));
     }
 
-    // open rectangular rooms: clear internal walls. Each room is either a pillar
-    // room (solid floor) or a void room (beams over the void). Corridors stay solid.
     void CarveRooms()
     {
         isRoom = new bool[width, height];
@@ -224,7 +234,7 @@ public class MazeGenerator : MonoBehaviour
                 for (int y = ry; y < ry + rh && y < height; y++)
                 {
                     isRoom[x, y] = true;
-                    if (voidRoom && !(x == 0 && y == 0)) isVoid[x, y] = true; // never void the spawn
+                    if (voidRoom && !(x == 0 && y == 0)) isVoid[x, y] = true;
                     if (x + 1 < rx + rw && x + 1 < width) RemoveWallBetween(new Vector2Int(x, y), new Vector2Int(x + 1, y));
                     if (y + 1 < ry + rh && y + 1 < height) RemoveWallBetween(new Vector2Int(x, y), new Vector2Int(x, y + 1));
                 }
@@ -258,18 +268,17 @@ public class MazeGenerator : MonoBehaviour
         else { wallW[a.x, a.y] = false; wallE[b.x, b.y] = false; }
     }
 
-    // --- build geometry from the carved grid, spread across frames ---
     IEnumerator BuildRoutine()
     {
-        geo = new GameObject("Geometry").transform;  // static, mesh-combined
+        geo = new GameObject("Geometry").transform;
         geo.SetParent(transform);
         geo.localPosition = Vector3.zero;
 
-        var postNodes = new HashSet<Vector2Int>(); // grid corners that need a post
-        var lampX = AxisMarks(width, lightSpacing);   // emissive lamp panels
+        var postNodes = new HashSet<Vector2Int>();
+        var lampX = AxisMarks(width, lightSpacing);
         var lampY = AxisMarks(height, lightSpacing);
-        var litX = AxisMarks(width, realLightSpacing);  // real point lights (subset)
-        var litY = AxisMarks(height, realLightSpacing);
+        var litX  = AxisMarks(width, realLightSpacing);
+        var litY  = AxisMarks(height, realLightSpacing);
 
         for (int x = 0; x < width; x++)
         {
@@ -277,39 +286,48 @@ public class MazeGenerator : MonoBehaviour
             {
                 Vector3 c = CellCenter(x, y);
 
-                if (isVoid[x, y]) BeamFloor(c);        // thin beams over the void
-                else Tile(c, 0f, floorMat);            // solid floor
-                if (buildCeiling) DrywallCeiling(c);   // suspended-tile ceiling
+                if (isVoid[x, y]) BeamFloor(c);
+                else Tile(c, 0f, floorMat);
+                if (buildCeiling) DrywallCeiling(c);
 
                 if (addPillars && isRoom[x, y] && !isVoid[x, y] && x % 2 == 0 && y % 2 == 0)
                     Pillar(c);
 
-                // place N and W walls per cell, plus outer S (bottom row) and E (right col).
-                // register each wall's two end nodes so we can cap corners/seams with posts.
                 if (wallN[x, y]) { Wall(c + Vector3.forward * cellSize / 2f, false); Node(postNodes, x, y + 1); Node(postNodes, x + 1, y + 1); }
                 if (wallW[x, y]) { Wall(c + Vector3.left    * cellSize / 2f, true);  Node(postNodes, x, y);     Node(postNodes, x, y + 1); }
                 if (y == 0 && wallS[x, y]) { Wall(c + Vector3.back  * cellSize / 2f, false); Node(postNodes, x, y); Node(postNodes, x + 1, y); }
                 if (x == width - 1 && wallE[x, y]) { Wall(c + Vector3.right * cellSize / 2f, true); Node(postNodes, x + 1, y); Node(postNodes, x + 1, y + 1); }
 
-                // emissive lamp panel on the dense grid; real point light only on the coarse grid
                 if (buildCeiling && lampX.Contains(x) && lampY.Contains(y))
                     LampFixture(c, litX.Contains(x) && litY.Contains(y));
             }
 
             if (buildChunkCols > 0 && x % buildChunkCols == 0)
-                yield return null;           // breathe: spread the work over frames
+                yield return null;
         }
 
         foreach (var n in postNodes) CornerPost(n);
 
         CatchFloor();
-        StaticBatchingUtility.Combine(geo.gameObject); // collapse meshes by material -> few draw calls
+
+        // QUITADO: StaticBatchingUtility.Combine — causaba lag y errores de lectura de mesh
+
+        // Bake NavMesh sobre la geometría generada
+        var surface = GetComponent<NavMeshSurface>();
+        if (surface != null)
+        {
+            surface.BuildNavMesh();
+        }
+        else
+        {
+            Debug.LogWarning("[MazeGenerator] No se encontró NavMeshSurface. Agrégalo al mismo GameObject que MazeGenerator.");
+        }
+
         if (spawnPlayer) SpawnPlayer();
     }
 
     void Node(HashSet<Vector2Int> set, int i, int j) => set.Add(new Vector2Int(i, j));
 
-    // cell indices along an axis spaced ~`spacing` cells apart (e.g. 1.5 -> 0,2,3,5,6,8,...)
     HashSet<int> AxisMarks(int n, float spacing)
     {
         var s = new HashSet<int>();
@@ -323,63 +341,64 @@ public class MazeGenerator : MonoBehaviour
         return s;
     }
 
-    // post at a grid corner: caps the gap where wall segments meet at corners and seams
     void CornerPost(Vector2Int n)
     {
         Vector3 pos = transform.position + new Vector3(n.x * cellSize - cellSize / 2f, wallHeight / 2f, n.y * cellSize - cellSize / 2f);
         Slab(pos, new Vector3(0.2f, wallHeight, 0.2f), wallMat);
     }
 
-    // dark, enclosed pit below the maze: black floor + 4 walls, no lights, so
-    // falling drops into near-total darkness. Touching the floor respawns you.
     void CatchFloor()
     {
-        // true maze center/size: cells span [-cellSize/2 .. (n-1)*cellSize + cellSize/2]
         Vector3 mid = transform.position + new Vector3((width - 1) * cellSize / 2f, 0f, (height - 1) * cellSize / 2f);
         float w = width * cellSize, d = height * cellSize;
-        float t = 0.2f; // match outer maze wall thickness so the pit looks like its continuation
+        float t = 0.2f;
 
-        Slab(mid + Vector3.down * voidDepth, new Vector3(w, 0.2f, d), darkMat); // catch floor
-
-        // 4 perimeter walls, aligned to the outer wall planes, from floor down to the pit
+        Slab(mid + Vector3.down * voidDepth, new Vector3(w, 0.2f, d), darkMat);
         Slab(mid + new Vector3(0, -voidDepth / 2f,  d / 2f), new Vector3(w, voidDepth, t), darkMat);
         Slab(mid + new Vector3(0, -voidDepth / 2f, -d / 2f), new Vector3(w, voidDepth, t), darkMat);
         Slab(mid + new Vector3( w / 2f, -voidDepth / 2f, 0), new Vector3(t, voidDepth, d), darkMat);
         Slab(mid + new Vector3(-w / 2f, -voidDepth / 2f, 0), new Vector3(t, voidDepth, d), darkMat);
     }
 
-    // spawn the player capsule at the start cell so you don't add it by hand
     void SpawnPlayer()
     {
         var p = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         p.name = "Player";
-        Destroy(p.GetComponent<Collider>());        // SimplePlayer's CharacterController is the collider
+        Destroy(p.GetComponent<Collider>());
         p.transform.position = CellCenter(0, 0) + Vector3.up * 1.1f;
         var player = p.AddComponent<SimplePlayer>();
+
+        // ── NUEVO: asignar jugador al enemigo automáticamente ──
+        var enemy = FindFirstObjectByType<enemyLogic>();
+        if (enemy != null)
+        {
+            enemy.player = p.transform;
+            Debug.Log("[MazeGenerator] Jugador asignado al EnemyLogic correctamente.");
+        }
+        else
+        {
+            Debug.LogWarning("[MazeGenerator] No se encontró EnemyLogic en la escena.");
+        }
 
         if (elevatorIntro) BuildElevator(CellCenter(0, 0), player);
     }
 
-    // metal car inset inside the start cell (inset avoids z-fighting with the maze
-    // walls/floor) with center-parting north doors; runs the intro
     void BuildElevator(Vector3 center, SimplePlayer player)
     {
-        float inset = 0.2f;             // keep faces off the maze planes
+        float inset = 0.2f;
         float cs = cellSize, h = wallHeight - 0.12f;
-        float half = cs / 2f - inset;   // car half-width
+        float half = cs / 2f - inset;
 
         var ele = new GameObject("Elevator");
         ele.transform.SetParent(transform);
         ele.transform.position = center;
 
-        Box(ele.transform, new Vector3(0, 0.06f, 0),  new Vector3(half * 2, 0.1f, half * 2), metalMat); // floor (raised)
-        Box(ele.transform, new Vector3(0, h, 0),       new Vector3(half * 2, 0.1f, half * 2), metalMat); // ceiling
-        Box(ele.transform, new Vector3(0, h / 2f, -half), new Vector3(half * 2, h, 0.15f), metalMat);    // south
-        Box(ele.transform, new Vector3(-half, h / 2f, 0), new Vector3(0.15f, h, half * 2), metalMat);    // west
-        Box(ele.transform, new Vector3( half, h / 2f, 0), new Vector3(0.15f, h, half * 2), metalMat);    // east
+        Box(ele.transform, new Vector3(0, 0.06f, 0),      new Vector3(half * 2, 0.1f, half * 2), metalMat);
+        Box(ele.transform, new Vector3(0, h, 0),           new Vector3(half * 2, 0.1f, half * 2), metalMat);
+        Box(ele.transform, new Vector3(0, h / 2f, -half),  new Vector3(half * 2, h, 0.15f), metalMat);
+        Box(ele.transform, new Vector3(-half, h / 2f, 0),  new Vector3(0.15f, h, half * 2), metalMat);
+        Box(ele.transform, new Vector3( half, h / 2f, 0),  new Vector3(0.15f, h, half * 2), metalMat);
 
-        // telescoping center-opening doors: 2 panels per side, staggered in depth
-        // so they nest without z-fighting; inner panel retracts farther than outer
         int nPanels = 2;
         float pw = half / nPanels;
         var leftPanels  = new Transform[nPanels];
@@ -390,38 +409,33 @@ public class MazeGenerator : MonoBehaviour
             float pz = half + i * 0.13f;
             leftPanels[i]  = Box(ele.transform, new Vector3(-(i + 0.5f) * pw, h / 2f, pz), new Vector3(pw, h, 0.1f), metalMat).transform;
             rightPanels[i] = Box(ele.transform, new Vector3( (i + 0.5f) * pw, h / 2f, pz), new Vector3(pw, h, 0.1f), metalMat).transform;
-            panelSlides[i] = (nPanels - 1 - i) * pw;   // outer panel barely moves, inner slides full
+            panelSlides[i] = (nPanels - 1 - i) * pw;
         }
 
-        // control panel on the east wall, near the doors, styled after a real panel
-        float px = half - 0.082f;                // frame back flush against the east wall face
-        float cz = half * 0.62f;                 // closer to the doors (north)
+        float px = half - 0.082f;
+        float cz = half * 0.62f;
         var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        labelMat = new Material(Shader.Find("Custom/TextDepth")); // colored text, depth-tested
+        labelMat = new Material(Shader.Find("Custom/TextDepth"));
         Color red  = new Color(1f, 0.15f, 0.05f);
         Color dark = new Color(0.08f, 0.08f, 0.08f);
-        float zL = cz - 0.09f, zR = cz + 0.09f;  // left / right button columns
+        float zL = cz - 0.09f, zR = cz + 0.09f;
 
-        // recessed frame + raised plate so it reads as a mounted panel
-        Box(ele.transform, new Vector3(px,         1.40f, cz), new Vector3(0.012f, 1.22f, 0.46f), darkMat, false);  // frame
-        Box(ele.transform, new Vector3(px - 0.008f, 1.40f, cz), new Vector3(0.01f, 1.14f, 0.40f), panelMat, false); // plate
+        Box(ele.transform, new Vector3(px,          1.40f, cz), new Vector3(0.012f, 1.22f, 0.46f), darkMat,   false);
+        Box(ele.transform, new Vector3(px - 0.008f, 1.40f, cz), new Vector3(0.01f,  1.14f, 0.40f), panelMat,  false);
+        Box(ele.transform, new Vector3(px - 0.015f, 1.86f, cz), new Vector3(0.008f, 0.16f, 0.26f), darkMat,   false);
 
-        // flat black LED box + red floor digit at the top, facing the player (-X)
-        Box(ele.transform, new Vector3(px - 0.015f, 1.86f, cz), new Vector3(0.008f, 0.16f, 0.26f), darkMat, false);
         var tm = Label(ele.transform, new Vector3(px - 0.022f, 1.86f, cz), "2", red, 0.01f, font);
 
-        // door open / close buttons
         PanelButton(ele.transform, px, 1.62f, zL, "▶◀",  dark, font, 0.006f);
         PanelButton(ele.transform, px, 1.62f, zR, "◀ ▶", dark, font, 0.006f);
 
-        // numbered floor buttons: left even/B, right odd, rising upward
         string[] leftLabels  = { "B", "2", "4", "6" };
         string[] rightLabels = { "1", "3", "5", "7" };
         for (int r = 0; r < 4; r++)
         {
             float y = 0.95f + r * 0.16f;
-            PanelButton(ele.transform, px, y, zL, leftLabels[r],  dark, font);
-            PanelButton(ele.transform, px, y, zR, rightLabels[r], dark, font);
+            FloorButton(ele.transform, px, y, zL, leftLabels[r],  dark, font, tm);
+            FloorButton(ele.transform, px, y, zR, rightLabels[r], dark, font, tm);
         }
 
         var lgt = new GameObject("ElevatorLight");
@@ -431,11 +445,11 @@ public class MazeGenerator : MonoBehaviour
         l.type = LightType.Point; l.color = lightColor; l.intensity = 1.6f; l.range = cs * 2f; l.shadows = LightShadows.None;
 
         var intro = ele.AddComponent<ElevatorIntro>();
-        intro.player = player;
-        intro.leftPanels = leftPanels;
+        intro.player      = player;
+        intro.leftPanels  = leftPanels;
         intro.rightPanels = rightPanels;
         intro.panelSlides = panelSlides;
-        intro.display = tm;
+        intro.display     = tm;
     }
 
     GameObject Box(Transform parent, Vector3 localPos, Vector3 scale, Material mat, bool collide = true)
@@ -449,7 +463,6 @@ public class MazeGenerator : MonoBehaviour
         return b;
     }
 
-    // 3D text facing -X (toward a player looking at the east wall)
     TextMesh Label(Transform parent, Vector3 lp, string txt, Color col, float size, Font font)
     {
         var g = new GameObject("Label");
@@ -469,12 +482,22 @@ public class MazeGenerator : MonoBehaviour
         return t;
     }
 
-    // square button + its engraved label on the panel face
     void PanelButton(Transform parent, float px, float y, float z, string label, Color labelCol, Font font, float labelSize = 0.011f)
     {
         Box(parent, new Vector3(px - 0.015f, y, z), new Vector3(0.008f, 0.12f, 0.13f), buttonMat, false);
         if (!string.IsNullOrEmpty(label))
             Label(parent, new Vector3(px - 0.022f, y, z), label, labelCol, labelSize, font);
+    }
+
+    void FloorButton(Transform parent, float px, float y, float z, string label, Color labelCol, Font font, TextMesh display, float labelSize = 0.011f)
+    {
+        var button = Box(parent, new Vector3(px - 0.015f, y, z), new Vector3(0.008f, 0.12f, 0.13f), buttonMat, true);
+        if (!string.IsNullOrEmpty(label))
+            Label(parent, new Vector3(px - 0.022f, y, z), label, labelCol, labelSize, font);
+
+        var elevatorButton = button.AddComponent<ElevatorButton>();
+        elevatorButton.display = display;
+        elevatorButton.value = label;
     }
 
     Vector3 CellCenter(int x, int y) =>
@@ -486,8 +509,6 @@ public class MazeGenerator : MonoBehaviour
              new Vector3(cellSize, 0.1f, cellSize), mat);
     }
 
-    // cross of two beams through the cell center: walkable spine, edges fall.
-    // top flush with floor level (y=0), extends down by beamHeight.
     void BeamFloor(Vector3 center)
     {
         Vector3 p = center + Vector3.down * beamHeight / 2f;
@@ -501,7 +522,6 @@ public class MazeGenerator : MonoBehaviour
              new Vector3(cellSize * 0.3f, wallHeight, cellSize * 0.3f), wallMat);
     }
 
-    // alongZ = wall runs along the Z axis (a left/right wall); else along X
     void Wall(Vector3 pos, bool alongZ)
     {
         Vector3 scale = alongZ ? new Vector3(0.2f, wallHeight, cellSize)
@@ -509,7 +529,6 @@ public class MazeGenerator : MonoBehaviour
         Slab(pos + Vector3.up * wallHeight / 2f, scale, wallMat);
     }
 
-    // a static world-space cube; collide=false strips the collider (ceilings, lamps, decor)
     GameObject Slab(Vector3 pos, Vector3 scale, Material mat, bool collide = true)
     {
         var b = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -521,13 +540,11 @@ public class MazeGenerator : MonoBehaviour
         return b;
     }
 
-    // suspended ceiling: one tile per cell; the grid look comes from the tiled texture
     void DrywallCeiling(Vector3 c)
     {
         Slab(c + Vector3.up * wallHeight, new Vector3(cellSize, 0.1f, cellSize), ceilMat, false);
     }
 
-    // ceiling lamp fixture (emissive panel) in every cell; optionally a real light
     void LampFixture(Vector3 c, bool realLight)
     {
         Slab(c + Vector3.up * (wallHeight - 0.05f),
@@ -542,10 +559,6 @@ public class MazeGenerator : MonoBehaviour
         l.color = lightColor;
         l.intensity = lightIntensity;
         l.range = lightRange;
-        l.shadows = LightShadows.None;   // 100s of lights -> never cast shadows
+        l.shadows = LightShadows.None;
     }
 }
-
-// ponytail: maze + geometry + placeholder art in code, so Play works with no
-// setup. Swap to real prefabs/textures once the layout feels right. Enemies and
-// win/lose are separate scripts; bake a NavMesh after Generate() if enemies need it.
