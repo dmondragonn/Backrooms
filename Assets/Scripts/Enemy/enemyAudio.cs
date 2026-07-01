@@ -1,101 +1,78 @@
 // enemyAudio.cs
-// Controla los sonidos del enemigo y expone el sistema de audición.
-// Adjunta este script al mismo GameObject que enemyLogic.
+// Controla sonidos del enemigo y sistema de audición.
+// Adjunta al mismo GameObject que enemyLogic.
 
 using UnityEngine;
 
+public enum EnemyNoiseLevel { Idle, Walking, Running }
+
 public class enemyAudio : MonoBehaviour
 {
-    [Header("Clips de audio")]
-    [SerializeField] private AudioClip clipPatrol;       // Pasos lentos
-    [SerializeField] private AudioClip clipChase;        // Pasos rápidos / respiración
-    [SerializeField] private AudioClip clipStalk;        // Silencio tenso / leve murmullo
-    [SerializeField] private AudioClip clipSpawn;        // Sonido al aparecer
-    [SerializeField] private AudioClip clipVanish;       // Sonido al desaparecer
-    [SerializeField] private AudioClip clipDistantScream;// Evento raro — grito lejano
+    [Header("Clips de audio (opcionales)")]
+    [SerializeField] private AudioClip clipPatrol;
+    [SerializeField] private AudioClip clipChase;
+    [SerializeField] private AudioClip clipStalk;
+    [SerializeField] private AudioClip clipSpawn;
+    [SerializeField] private AudioClip clipVanish;
+    [SerializeField] private AudioClip clipDistantScream;
 
-    [Header("Audición del enemigo")]
-    [Tooltip("Radio en que escucha al jugador corriendo")]
-    [SerializeField] private float hearingRadiusRun   = 30f;
-    [Tooltip("Radio en que escucha al jugador caminando")]
-    [SerializeField] private float hearingRadiusWalk  = 12f;
-    [Tooltip("Radio en que escucha al jugador quieto")]
-    [SerializeField] private float hearingRadiusIdle  =  3f;
+    [Header("Radios de audición")]
+    [SerializeField] private float hearingRun  = 25f;
+    [SerializeField] private float hearingWalk = 10f;
+    [SerializeField] private float hearingIdle =  2f;
 
-    private AudioSource audioSource;
+    private AudioSource src;
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Init
-    // ──────────────────────────────────────────────────────────────────────────
     private void Awake()
     {
-        audioSource = GetComponent<AudioSource>();
-        if (audioSource == null)
-            audioSource = gameObject.AddComponent<AudioSource>();
-
-        audioSource.spatialBlend = 1f; // Sonido 3D
-        audioSource.rolloffMode  = AudioRolloffMode.Linear;
-        audioSource.maxDistance  = 60f;
+        src = GetComponent<AudioSource>();
+        if (src == null) src = gameObject.AddComponent<AudioSource>();
+        src.spatialBlend = 1f;
+        src.rolloffMode  = AudioRolloffMode.Linear;
+        src.maxDistance  = 50f;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Audición pública
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Audición ─────────────────────────────────────────────────────────────
 
-    public enum PlayerNoiseLevel { Idle, Walking, Running }
-
-    /// <summary>
-    /// Devuelve true si el enemigo puede escuchar al jugador según
-    /// su nivel de ruido y la distancia actual.
-    /// </summary>
-    public bool CanHearPlayer(Transform player, PlayerNoiseLevel noise)
+    public bool CanHearPlayer(Transform player, EnemyNoiseLevel noise)
     {
         if (player == null) return false;
-
         float dist = Vector3.Distance(transform.position, player.position);
-
         float radius = noise switch
         {
-            PlayerNoiseLevel.Running => hearingRadiusRun,
-            PlayerNoiseLevel.Walking => hearingRadiusWalk,
-            _                        => hearingRadiusIdle
+            EnemyNoiseLevel.Running => hearingRun,
+            EnemyNoiseLevel.Walking => hearingWalk,
+            _                       => hearingIdle
         };
-
         return dist <= radius;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Reproducción
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Reproducción ─────────────────────────────────────────────────────────
 
-    public void PlayPatrol()      => PlayLooped(clipPatrol);
-    public void PlayChase()       => PlayLooped(clipChase);
-    public void PlayStalk()       => PlayLooped(clipStalk);
-    public void PlaySpawn()       => PlayOneShot(clipSpawn);
-    public void PlayVanish()      => PlayOneShot(clipVanish);
-    public void PlayDistantScream() => PlayOneShot(clipDistantScream);
+    public void PlayPatrol()       => PlayLooped(clipPatrol);
+    public void PlayChase()        => PlayLooped(clipChase);
+    public void PlayStalk()        => PlayLooped(clipStalk);
+    public void PlaySpawn()        => PlayOneShot(clipSpawn);
+    public void PlayVanish()       => PlayOneShot(clipVanish);
+    public void PlayDistantScream()=> PlayOneShot(clipDistantScream);
 
     public void StopAudio()
     {
-        if (audioSource.isPlaying) audioSource.Stop();
+        if (src.isPlaying) src.Stop();
     }
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // Helpers privados
-    // ──────────────────────────────────────────────────────────────────────────
 
     private void PlayLooped(AudioClip clip)
     {
         if (clip == null) return;
-        if (audioSource.clip == clip && audioSource.isPlaying) return;
-        audioSource.clip   = clip;
-        audioSource.loop   = true;
-        audioSource.Play();
+        if (src.clip == clip && src.isPlaying) return;
+        src.clip = clip;
+        src.loop = true;
+        src.Play();
     }
 
     private void PlayOneShot(AudioClip clip)
     {
         if (clip == null) return;
-        audioSource.PlayOneShot(clip);
+        src.PlayOneShot(clip);
     }
 }

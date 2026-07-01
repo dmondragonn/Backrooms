@@ -5,30 +5,11 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using Unity.AI.Navigation;
 
-
-public class ElevatorButton : MonoBehaviour
-{
-    public TextMesh display;
-    public string value;
-
-    public void Press()
-    {
-        if (display != null && !string.IsNullOrEmpty(value))
-        {
-            display.text = value;
-        }
-    }
-
-    private void OnMouseDown()
-    {
-        Press();
-    }
-}
-// Generates a random 3D maze (recursive backtracker) and builds it from cube
-// primitives with backrooms-colored materials made in code. Zero setup: drop on
-// an empty GameObject and press Play. Swap colors/materials later for real art.
 public class MazeGenerator : MonoBehaviour
 {
+    // ── Flag estático: enemySpawner y horrorDirector esperan esto ────────────
+    public static bool NavMeshReady = false;
+
     [Header("Grid")]
     public int width = 42;
     public int height = 42;
@@ -37,7 +18,7 @@ public class MazeGenerator : MonoBehaviour
     public int seed = 0;
     public bool buildCeiling = true;
     public int ceilingTilesPerCell = 2;
-    public int buildChunkCols = 4;          // CAMBIADO: más columnas por frame = carga más rápida
+    public int buildChunkCols = 4;
     public bool spawnPlayer = true;
     public bool elevatorIntro = true;
 
@@ -75,7 +56,11 @@ public class MazeGenerator : MonoBehaviour
     bool[,] isRoom, isVoid;
     System.Random rng;
 
-    void Start() => Generate();
+    void Start()
+    {
+        NavMeshReady = false; // Resetear al iniciar
+        Generate();
+    }
 
     public void Generate()
     {
@@ -128,16 +113,16 @@ public class MazeGenerator : MonoBehaviour
         if (wallTexture == null) wallTexture = Resources.Load<Texture2D>("BackroomsWall2");
         var floorTex = Resources.Load<Texture2D>("BackroomsWall");
 
-        wallMat  = Lit(shader, wallColor);
+        wallMat = Lit(shader, wallColor);
         Apply(wallMat, wallTexture);
 
         floorMat = Lit(shader, floorColor);
         Apply(floorMat, floorTex);
 
-        ceilMat  = Lit(shader, Color.white);
+        ceilMat = Lit(shader, Color.white);
         ceilMat.mainTexture = GridTexture(ceilingColor, new Color(0.5f, 0.5f, 0.52f));
         ceilMat.mainTextureScale = new Vector2(ceilingTilesPerCell, ceilingTilesPerCell);
-        darkMat  = Lit(shader, new Color(0.02f, 0.02f, 0.02f));
+        darkMat = Lit(shader, new Color(0.02f, 0.02f, 0.02f));
         metalMat = Lit(shader, new Color(0.34f, 0.34f, 0.36f));
         metalMat.SetFloat("_Smoothness", 0.55f);
         buttonMat = Lit(shader, new Color(0.62f, 0.62f, 0.64f));
@@ -235,7 +220,7 @@ public class MazeGenerator : MonoBehaviour
                 {
                     isRoom[x, y] = true;
                     if (voidRoom && !(x == 0 && y == 0)) isVoid[x, y] = true;
-                    if (x + 1 < rx + rw && x + 1 < width) RemoveWallBetween(new Vector2Int(x, y), new Vector2Int(x + 1, y));
+                    if (x + 1 < rx + rw && x + 1 < width)  RemoveWallBetween(new Vector2Int(x, y), new Vector2Int(x + 1, y));
                     if (y + 1 < ry + rh && y + 1 < height) RemoveWallBetween(new Vector2Int(x, y), new Vector2Int(x, y + 1));
                 }
         }
@@ -262,10 +247,10 @@ public class MazeGenerator : MonoBehaviour
 
     void RemoveWallBetween(Vector2Int a, Vector2Int b)
     {
-        if (b.y > a.y) { wallN[a.x, a.y] = false; wallS[b.x, b.y] = false; }
+        if (b.y > a.y)      { wallN[a.x, a.y] = false; wallS[b.x, b.y] = false; }
         else if (b.y < a.y) { wallS[a.x, a.y] = false; wallN[b.x, b.y] = false; }
         else if (b.x > a.x) { wallE[a.x, a.y] = false; wallW[b.x, b.y] = false; }
-        else { wallW[a.x, a.y] = false; wallE[b.x, b.y] = false; }
+        else                 { wallW[a.x, a.y] = false; wallE[b.x, b.y] = false; }
     }
 
     IEnumerator BuildRoutine()
@@ -275,9 +260,9 @@ public class MazeGenerator : MonoBehaviour
         geo.localPosition = Vector3.zero;
 
         var postNodes = new HashSet<Vector2Int>();
-        var lampX = AxisMarks(width, lightSpacing);
+        var lampX = AxisMarks(width,  lightSpacing);
         var lampY = AxisMarks(height, lightSpacing);
-        var litX  = AxisMarks(width, realLightSpacing);
+        var litX  = AxisMarks(width,  realLightSpacing);
         var litY  = AxisMarks(height, realLightSpacing);
 
         for (int x = 0; x < width; x++)
@@ -295,8 +280,8 @@ public class MazeGenerator : MonoBehaviour
 
                 if (wallN[x, y]) { Wall(c + Vector3.forward * cellSize / 2f, false); Node(postNodes, x, y + 1); Node(postNodes, x + 1, y + 1); }
                 if (wallW[x, y]) { Wall(c + Vector3.left    * cellSize / 2f, true);  Node(postNodes, x, y);     Node(postNodes, x, y + 1); }
-                if (y == 0 && wallS[x, y]) { Wall(c + Vector3.back  * cellSize / 2f, false); Node(postNodes, x, y); Node(postNodes, x + 1, y); }
-                if (x == width - 1 && wallE[x, y]) { Wall(c + Vector3.right * cellSize / 2f, true); Node(postNodes, x + 1, y); Node(postNodes, x + 1, y + 1); }
+                if (y == 0 && wallS[x, y])         { Wall(c + Vector3.back  * cellSize / 2f, false); Node(postNodes, x, y);     Node(postNodes, x + 1, y); }
+                if (x == width - 1 && wallE[x, y]) { Wall(c + Vector3.right * cellSize / 2f, true);  Node(postNodes, x + 1, y); Node(postNodes, x + 1, y + 1); }
 
                 if (buildCeiling && lampX.Contains(x) && lampY.Contains(y))
                     LampFixture(c, litX.Contains(x) && litY.Contains(y));
@@ -307,20 +292,19 @@ public class MazeGenerator : MonoBehaviour
         }
 
         foreach (var n in postNodes) CornerPost(n);
-
         CatchFloor();
 
-        // QUITADO: StaticBatchingUtility.Combine — causaba lag y errores de lectura de mesh
-
-        // Bake NavMesh sobre la geometría generada
+        // Bake NavMesh
         var surface = GetComponent<NavMeshSurface>();
         if (surface != null)
         {
             surface.BuildNavMesh();
+            NavMeshReady = true;
+            Debug.Log("[MazeGenerator] NavMesh bakeado. Enemigo puede activarse.");
         }
         else
         {
-            Debug.LogWarning("[MazeGenerator] No se encontró NavMeshSurface. Agrégalo al mismo GameObject que MazeGenerator.");
+            Debug.LogWarning("[MazeGenerator] No hay NavMeshSurface en este GameObject.");
         }
 
         if (spawnPlayer) SpawnPlayer();
@@ -354,10 +338,10 @@ public class MazeGenerator : MonoBehaviour
         float t = 0.2f;
 
         Slab(mid + Vector3.down * voidDepth, new Vector3(w, 0.2f, d), darkMat);
-        Slab(mid + new Vector3(0, -voidDepth / 2f,  d / 2f), new Vector3(w, voidDepth, t), darkMat);
-        Slab(mid + new Vector3(0, -voidDepth / 2f, -d / 2f), new Vector3(w, voidDepth, t), darkMat);
-        Slab(mid + new Vector3( w / 2f, -voidDepth / 2f, 0), new Vector3(t, voidDepth, d), darkMat);
-        Slab(mid + new Vector3(-w / 2f, -voidDepth / 2f, 0), new Vector3(t, voidDepth, d), darkMat);
+        Slab(mid + new Vector3(0,      -voidDepth / 2f,  d / 2f), new Vector3(w, voidDepth, t), darkMat);
+        Slab(mid + new Vector3(0,      -voidDepth / 2f, -d / 2f), new Vector3(w, voidDepth, t), darkMat);
+        Slab(mid + new Vector3( w / 2f,-voidDepth / 2f, 0),       new Vector3(t, voidDepth, d), darkMat);
+        Slab(mid + new Vector3(-w / 2f,-voidDepth / 2f, 0),       new Vector3(t, voidDepth, d), darkMat);
     }
 
     void SpawnPlayer()
@@ -366,21 +350,26 @@ public class MazeGenerator : MonoBehaviour
         p.name = "Player";
         Destroy(p.GetComponent<Collider>());
         p.transform.position = CellCenter(0, 0) + Vector3.up * 1.1f;
-        var player = p.AddComponent<SimplePlayer>();
+        var playerComp = p.AddComponent<SimplePlayer>();
 
-        // ── NUEVO: asignar jugador al enemigo automáticamente ──
-        var enemy = FindFirstObjectByType<enemyLogic>();
-        if (enemy != null)
+        // Asignar jugador al spawner automáticamente
+        var spawner = FindFirstObjectByType<enemySpawner>();
+        if (spawner != null)
         {
-            enemy.player = p.transform;
-            Debug.Log("[MazeGenerator] Jugador asignado al EnemyLogic correctamente.");
-        }
-        else
-        {
-            Debug.LogWarning("[MazeGenerator] No se encontró EnemyLogic en la escena.");
+            spawner.player       = p.transform;
+            spawner.playerCamera = p.GetComponentInChildren<Camera>();
+            Debug.Log("[MazeGenerator] Jugador asignado al enemySpawner.");
         }
 
-        if (elevatorIntro) BuildElevator(CellCenter(0, 0), player);
+        // Asignar jugador a enemyLogic también por si acaso
+        var logic = FindFirstObjectByType<enemyLogic>();
+        if (logic != null)
+        {
+            logic.player = p.transform;
+            Debug.Log("[MazeGenerator] Jugador asignado al enemyLogic.");
+        }
+
+        if (elevatorIntro) BuildElevator(CellCenter(0, 0), playerComp);
     }
 
     void BuildElevator(Vector3 center, SimplePlayer player)
@@ -415,14 +404,14 @@ public class MazeGenerator : MonoBehaviour
         float px = half - 0.082f;
         float cz = half * 0.62f;
         var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        labelMat = new Material(Shader.Find("Custom/TextDepth"));
+        labelMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         Color red  = new Color(1f, 0.15f, 0.05f);
         Color dark = new Color(0.08f, 0.08f, 0.08f);
         float zL = cz - 0.09f, zR = cz + 0.09f;
 
-        Box(ele.transform, new Vector3(px,          1.40f, cz), new Vector3(0.012f, 1.22f, 0.46f), darkMat,   false);
-        Box(ele.transform, new Vector3(px - 0.008f, 1.40f, cz), new Vector3(0.01f,  1.14f, 0.40f), panelMat,  false);
-        Box(ele.transform, new Vector3(px - 0.015f, 1.86f, cz), new Vector3(0.008f, 0.16f, 0.26f), darkMat,   false);
+        Box(ele.transform, new Vector3(px,          1.40f, cz), new Vector3(0.012f, 1.22f, 0.46f), darkMat,  false);
+        Box(ele.transform, new Vector3(px - 0.008f, 1.40f, cz), new Vector3(0.01f,  1.14f, 0.40f), panelMat, false);
+        Box(ele.transform, new Vector3(px - 0.015f, 1.86f, cz), new Vector3(0.008f, 0.16f, 0.26f), darkMat,  false);
 
         var tm = Label(ele.transform, new Vector3(px - 0.022f, 1.86f, cz), "2", red, 0.01f, font);
 

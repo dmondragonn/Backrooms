@@ -1,39 +1,34 @@
 // enemyVision.cs
 // Sistema de visión del enemigo: cono de visión + raycast para detectar paredes.
-// Requiere que el jugador esté en la capa "Player".
 
 using UnityEngine;
 
 public class enemyVision : MonoBehaviour
 {
-    [Header("Parámetros de visión")]
-    [SerializeField] private float viewRadius      = 25f;
-    [SerializeField, Range(0f, 360f)]
-    private float             viewAngle       = 90f;
-    [SerializeField] private LayerMask        playerMask;
-    [SerializeField] private LayerMask        obstacleMask;
+    [Header("Visión")]
+    [SerializeField] public float viewRadius = 20f;
+    [SerializeField, Range(0f, 360f)] public float viewAngle = 100f;
+    [SerializeField] private LayerMask obstacleMask;
 
-    [Header("Acecho — rango ampliado sin ángulo")]
-    [SerializeField] private float stalkRadius = 40f;   // Detecta al jugador para acechar
+    [Header("Acecho")]
+    [SerializeField] public float stalkRadius = 30f;
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // API pública
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── API pública ──────────────────────────────────────────────────────────
 
-    /// <summary>¿El jugador está dentro del cono de visión Y sin obstáculos?</summary>
+    /// <summary>¿El jugador está dentro del cono de visión sin obstáculos?</summary>
     public bool CanSeePlayer(Transform player)
     {
         if (player == null) return false;
 
-        Vector3 dirToPlayer = (player.position - transform.position).normalized;
-        float   distToPlayer = Vector3.Distance(transform.position, player.position);
+        Vector3 dir  = (player.position - transform.position).normalized;
+        float   dist = Vector3.Distance(transform.position, player.position);
 
-        if (distToPlayer > viewRadius)           return false;
-        if (Vector3.Angle(transform.forward, dirToPlayer) > viewAngle * 0.5f) return false;
+        if (dist > viewRadius) return false;
+        if (Vector3.Angle(transform.forward, dir) > viewAngle * 0.5f) return false;
 
-        // Raycast para paredes
-        if (Physics.Raycast(transform.position, dirToPlayer, distToPlayer, obstacleMask))
-            return false;
+        // Raycast — ¿hay pared en medio?
+        if (Physics.Raycast(transform.position + Vector3.up * 1f,
+                            dir, dist, obstacleMask)) return false;
 
         return true;
     }
@@ -45,30 +40,27 @@ public class enemyVision : MonoBehaviour
         return Vector3.Distance(transform.position, player.position) <= stalkRadius;
     }
 
-    /// <summary>Distancia actual al jugador (-1 si no existe).</summary>
+    /// <summary>Distancia actual al jugador.</summary>
     public float DistanceTo(Transform player)
     {
-        if (player == null) return -1f;
+        if (player == null) return float.MaxValue;
         return Vector3.Distance(transform.position, player.position);
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Debug — dibuja el cono en el editor
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Gizmos ───────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, viewRadius);
 
-        Vector3 leftBoundary  = DirFromAngle(-viewAngle * 0.5f);
-        Vector3 rightBoundary = DirFromAngle( viewAngle * 0.5f);
-
+        Vector3 left  = DirFromAngle(-viewAngle * 0.5f);
+        Vector3 right = DirFromAngle( viewAngle * 0.5f);
         Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, transform.position + leftBoundary  * viewRadius);
-        Gizmos.DrawLine(transform.position, transform.position + rightBoundary * viewRadius);
+        Gizmos.DrawLine(transform.position, transform.position + left  * viewRadius);
+        Gizmos.DrawLine(transform.position, transform.position + right * viewRadius);
 
-        Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.2f);
         Gizmos.DrawWireSphere(transform.position, stalkRadius);
     }
 
