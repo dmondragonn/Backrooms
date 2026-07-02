@@ -50,6 +50,7 @@ public class Level3Generator : MonoBehaviour
     public float railThick = 0.8f;         // a box with its 2 smallest dims <= this = a beam
     public float pipeMinLen = 5f;          // beam at least this long -> becomes a cylinder
     public float pipeMinRadius = 0.09f;
+    public bool pipeColliders = true;      // solid pipes (off = fewer colliders, better perf)
     public Color pipeColor = new Color(0.30f, 0.31f, 0.33f);
 
     [Header("Ceiling cap (model has no solid ceiling)")]
@@ -66,11 +67,16 @@ public class Level3Generator : MonoBehaviour
     [Header("Doors")]
     public bool removeDoors = true;        // delete the level door block (Brown_Particle_Board)
     public bool removeHintsText = true;    // delete hints wall text (Black_Cardboard glyphs)
+    public bool hintsDoorPassable = true;  // keep the hints door visible but walk-through (no hole)
 
-    [Header("Cut box (delete ANYTHING inside - move the red box onto a stuck door)")]
+    [System.Serializable]
+    public struct CutVol { public Vector3 center; public Vector3 size; }
+
+    [Header("Cut boxes (delete ANYTHING inside - move the red gizmos onto obstructions)")]
     public bool useCutBox = true;
-    public Vector3 cutBoxCenter = new Vector3(63.8f, 46.3f, -265f);
-    public Vector3 cutBoxSize = new Vector3(3.5f, 5f, 3.5f);
+    public CutVol[] cutBoxes = DefaultCuts();
+
+    static CutVol[] DefaultCuts() => new CutVol[0]; // empty; add volumes only to carve specific obstructions
 
     Material floorMat, wallMat, ceilMat, pipeMat, lampMat;
     Vector3 spawnPos;
@@ -245,7 +251,7 @@ public class Level3Generator : MonoBehaviour
             // model neon fixture -> emissive lamp box + a sparse real point light
             if (isLevel && neonMat >= 0 && bx.m == neonMat)
             {
-                MakeBox(parent, local, scl, lampMat);
+                MakeBox(parent, local, scl, lampMat, false); // lamps: no collider
                 if (addLights) TryLight(raw);
                 continue;
             }
@@ -261,23 +267,41 @@ public class Level3Generator : MonoBehaviour
 
             bool flat = scl.y < scl.x && scl.y < scl.z;
             Material mat = !flat ? wallMat : (bx.c[1] > midY ? ceilMat : floorMat);
-            MakeBox(parent, local, scl, mat);
+            // collider only where the player can actually hit: walls + low floors,
+            // and skip tiny decorative bits. Ceiling + clutter render without colliders.
+            bool collide = (!flat || bx.c[1] <= midY) && Mathf.Max(scl.x, Mathf.Max(scl.y, scl.z)) > 0.3f;
+            if (!isLevel && hintsDoorPassable && InHintsDoor(raw)) collide = false; // walk through door
+            MakeBox(parent, local, scl, mat, collide);
         }
+    }
+
+    // hints doorway block in raw model space (independent of dock/rotation)
+    bool InHintsDoor(Vector3 raw)
+    {
+        Vector3 r = raw / Mathf.Max(0.0001f, worldScale);
+        return r.x >= 31f && r.x <= 35.5f && r.y >= 3f && r.y <= 7.5f && r.z >= -4f && r.z <= 1f;
     }
 
     bool InCut(Vector3 w)
     {
-        Vector3 d = w - cutBoxCenter;
-        return Mathf.Abs(d.x) <= cutBoxSize.x * 0.5f
-            && Mathf.Abs(d.y) <= cutBoxSize.y * 0.5f
-            && Mathf.Abs(d.z) <= cutBoxSize.z * 0.5f;
+        if (cutBoxes == null) return false;
+        foreach (var v in cutBoxes)
+        {
+            Vector3 d = w - v.center;
+            if (Mathf.Abs(d.x) <= v.size.x * 0.5f && Mathf.Abs(d.y) <= v.size.y * 0.5f && Mathf.Abs(d.z) <= v.size.z * 0.5f)
+                return true;
+        }
+        return false;
     }
+
+    [ContextMenu("Reset Cut Boxes")]
+    void ResetCutBoxes() { cutBoxes = DefaultCuts(); Generate(); }
 
     void OnDrawGizmosSelected()
     {
-        if (!useCutBox) return;
+        if (!useCutBox || cutBoxes == null) return;
         Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.8f);
-        Gizmos.DrawWireCube(cutBoxCenter, cutBoxSize);
+        foreach (var v in cutBoxes) Gizmos.DrawWireCube(v.center, v.size);
     }
 
     void Kill(Object o) { if (Application.isPlaying) Destroy(o); else DestroyImmediate(o); }
@@ -288,12 +312,13 @@ public class Level3Generator : MonoBehaviour
         Extents(boxes, out Vector3 lo, out Vector3 hi);
         Vector3 c = new Vector3((lo.x + hi.x) * 0.5f, ceilingY, (lo.z + hi.z) * 0.5f);
         Vector3 s = new Vector3(hi.x - lo.x, 0.4f, hi.z - lo.z);
-        MakeBox(parent, c, s, ceilMat);
+        MakeBox(parent, c, s, ceilMat, false); // ceiling: no collider
     }
 
-    void MakeBox(Transform parent, Vector3 local, Vector3 scl, Material mat)
+    void MakeBox(Transform parent, Vector3 local, Vector3 scl, Material mat, bool collide = true)
     {
         var c = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        if (!collide) Kill(c.GetComponent<Collider>());   // drop colliders player never touches
         c.transform.SetParent(parent, false);
         c.transform.localPosition = local;
         c.transform.localScale = scl;
@@ -315,7 +340,8 @@ public class Level3Generator : MonoBehaviour
     void RailCylinder(Transform parent, Vector3 pos, int axis, float len, float rad)
     {
         var c = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        c.transform.SetParent(parent, false);         // keep collider -> pipes are solid
+        if (!pipeColliders) Kill(c.GetComponent<Collider>());
+        c.transform.SetParent(parent, false);
         c.transform.localPosition = pos;
         c.transform.localRotation = axis == 0 ? Quaternion.Euler(0, 0, 90)
                                   : axis == 2 ? Quaternion.Euler(90, 0, 0) : Quaternion.identity;

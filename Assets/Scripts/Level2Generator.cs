@@ -150,6 +150,9 @@ public class Level2Generator : MonoBehaviour
         grade.contrast.Override(6f);
         var vig = p.Add<Vignette>(true);
         vig.intensity.Override(0.2f);
+        var grain = p.Add<FilmGrain>(true);
+        grain.type.Override(FilmGrainLookup.Thin1);
+        grain.intensity.Override(0.12f);
 
         var go = new GameObject("PostFX");
         go.transform.SetParent(transform);
@@ -274,7 +277,7 @@ public class Level2Generator : MonoBehaviour
             for (int y = 0; y < height; y++)
             {
                 Vector3 c = Cell(x, y);
-                Slab(c + Vector3.down * 0.05f, new Vector3(cellSize, 0.1f, cellSize), floorMat);
+                Slab(c + Vector3.down * 0.05f, new Vector3(cellSize, 0.1f, cellSize), floorMat, false);
                 if (buildCeiling) Slab(c + Vector3.up * wallHeight, new Vector3(cellSize, 0.1f, cellSize), ceilMat, false);
 
                 if (addPillars && isRoom[x, y] && isOpen[x, y] && x % 2 == 0 && y % 2 == 0)
@@ -291,9 +294,10 @@ public class Level2Generator : MonoBehaviour
             if (buildChunkCols > 0 && x % buildChunkCols == 0) yield return null;
         }
 
-        foreach (var n in postNodes) Slab(NodePos(n), new Vector3(0.2f, wallHeight, 0.2f), wallMat);
+        foreach (var n in postNodes) Slab(NodePos(n), new Vector3(0.2f, wallHeight, 0.2f), wallMat, false);
         foreach (var t in tableCells) PartyTable(Cell(t.x, t.y));
 
+        GroundCollider(); // one flat collider instead of 1 per floor cell
         StaticBatchingUtility.Combine(geo.gameObject);
         if (spawnPlayer) SpawnPlayer();
     }
@@ -377,6 +381,16 @@ public class Level2Generator : MonoBehaviour
             bal.GetComponent<Renderer>().sharedMaterial = mat;
             Destroy(bal.GetComponent<Collider>());
         }
+    }
+
+    // single ground plane collider under the whole flat floor
+    void GroundCollider()
+    {
+        var g = new GameObject("Ground");
+        g.transform.SetParent(transform);
+        g.transform.position = transform.position + new Vector3((width - 1) * cellSize * 0.5f, -0.05f, (height - 1) * cellSize * 0.5f);
+        var bc = g.AddComponent<BoxCollider>();
+        bc.size = new Vector3(width * cellSize, 0.1f, height * cellSize);
     }
 
     void SpawnPlayer()
