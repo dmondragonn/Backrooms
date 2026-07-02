@@ -1,8 +1,4 @@
 // enemyLogic.cs
-// Máquina de estados completa del enemigo para Backrooms.
-// El enemigo comienza DESACTIVADO en la escena (SetActive false desde el editor).
-// El enemySpawner lo activa cuando el NavMesh está listo.
-
 using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
@@ -12,8 +8,6 @@ using UnityEngine.AI;
 [RequireComponent(typeof(enemyAudio))]
 public class enemyLogic : MonoBehaviour
 {
-    // ── Inspector ────────────────────────────────────────────────────────────
-
     [Header("Referencias")]
     public Transform player;
 
@@ -22,31 +16,26 @@ public class enemyLogic : MonoBehaviour
 
     [Header("Velocidades")]
     [SerializeField] private float patrolSpeed      = 2.5f;
-    [SerializeField] private float chaseSpeed       = 5f;
+    [SerializeField] private float chaseSpeed       = 3.8f; // Ligeramente menor que moveSpeed del jugador (4f)
     [SerializeField] private float investigateSpeed = 3f;
 
     [Header("Tiempos")]
     [SerializeField] private float searchDuration  = 10f;
     [SerializeField] private float stalkDuration   = 4f;
     [SerializeField] private float chaseDurationMax= 20f;
-    [SerializeField] private float vanishDuration  = 1.2f;
     [SerializeField] private float spawnDuration   = 1.2f;
 
     [Header("Agresividad")]
     [SerializeField] private float aggressionRate = 0.005f;
     [SerializeField] private float aggressionMax  = 3f;
 
-    // ── Estado público ───────────────────────────────────────────────────────
     public enemyState CurrentState { get; private set; } = enemyState.Dormant;
     public float      Aggression   { get; private set; } = 0f;
 
-    // ── Componentes ──────────────────────────────────────────────────────────
-    private NavMeshAgent  agent;
-    private enemyVision   vision;
-    private enemyAudio    audio;
-    private Renderer[]    renderers;
+    private NavMeshAgent agent;
+    private enemyVision  vision;
+    private enemyAudio   audio;
 
-    // ── Variables internas ───────────────────────────────────────────────────
     private float   stateTimer;
     private float   chaseTimer;
     private Vector3 investigateTarget;
@@ -54,20 +43,13 @@ public class enemyLogic : MonoBehaviour
     private int     patrolIndex = 0;
     private EnemyNoiseLevel playerNoise = EnemyNoiseLevel.Walking;
 
-    // ── Awake / OnEnable ─────────────────────────────────────────────────────
-
     private void Awake()
     {
-        agent     = GetComponent<NavMeshAgent>();
-        vision    = GetComponent<enemyVision>();
-        audio     = GetComponent<enemyAudio>();
-        renderers = GetComponentsInChildren<Renderer>();
-
-        // El agente empieza desactivado; lo activa el spawner una vez haya NavMesh
+        agent  = GetComponent<NavMeshAgent>();
+        vision = GetComponent<enemyVision>();
+        audio  = GetComponent<enemyAudio>();
         agent.enabled = false;
     }
-
-    // ── Update principal ─────────────────────────────────────────────────────
 
     private void Update()
     {
@@ -77,16 +59,14 @@ public class enemyLogic : MonoBehaviour
 
         switch (CurrentState)
         {
+            case enemyState.Spawn:       UpdateSpawn();       break;
             case enemyState.Patrol:      UpdatePatrol();      break;
             case enemyState.Stalk:       UpdateStalk();       break;
             case enemyState.Investigate: UpdateInvestigate(); break;
             case enemyState.Chase:       UpdateChase();       break;
             case enemyState.Search:      UpdateSearch();      break;
-            case enemyState.Spawn:       UpdateSpawn();       break;
         }
     }
-
-    // ── Estados ──────────────────────────────────────────────────────────────
 
     private void UpdateSpawn()
     {
@@ -98,7 +78,6 @@ public class enemyLogic : MonoBehaviour
     {
         agent.speed = patrolSpeed;
 
-        // ¿Ve al jugador? → perseguir
         if (vision.CanSeePlayer(player))
         {
             lastKnownPlayerPos = player.position;
@@ -106,7 +85,6 @@ public class enemyLogic : MonoBehaviour
             return;
         }
 
-        // ¿Escucha al jugador? → investigar
         if (audio.CanHearPlayer(player, playerNoise))
         {
             investigateTarget = player.position;
@@ -114,7 +92,6 @@ public class enemyLogic : MonoBehaviour
             return;
         }
 
-        // ¿Jugador en rango de acecho? → pequeña probabilidad de acechar
         if (vision.IsPlayerInStalkRange(player) && Random.value < 0.002f)
         {
             SetState(enemyState.Stalk);
@@ -126,7 +103,6 @@ public class enemyLogic : MonoBehaviour
 
     private void UpdateStalk()
     {
-        // Gira lentamente hacia el jugador sin moverse
         if (player != null)
         {
             Vector3 dir = (player.position - transform.position).normalized;
@@ -138,7 +114,6 @@ public class enemyLogic : MonoBehaviour
 
         stateTimer -= Time.deltaTime;
 
-        // Si ve al jugador directamente → perseguir
         if (vision.CanSeePlayer(player))
         {
             lastKnownPlayerPos = player.position;
@@ -146,10 +121,11 @@ public class enemyLogic : MonoBehaviour
             return;
         }
 
-        // Si el jugador lo mira fijamente → desaparecer (mecánica Backrooms)
+        // Mecánica Backrooms: si el jugador lo mira → se teletransporta
         if (IsPlayerLookingAtEnemy())
         {
-            SetState(enemyState.Vanish);
+            TeleportNearPlayer();
+            SetState(enemyState.Patrol);
             return;
         }
 
@@ -167,14 +143,13 @@ public class enemyLogic : MonoBehaviour
             return;
         }
 
-        // Llegó al destino → patrullar
         if (!agent.pathPending && agent.remainingDistance < 1.2f)
             SetState(enemyState.Patrol);
     }
 
     private void UpdateChase()
     {
-        agent.speed = chaseSpeed + Aggression * 0.4f;
+        agent.speed = chaseSpeed + Aggression * 0.3f;
 
         if (player != null)
         {
@@ -183,15 +158,9 @@ public class enemyLogic : MonoBehaviour
         }
 
         chaseTimer += Time.deltaTime;
-
-        bool lostSight = !vision.CanSeePlayer(player);
-        bool tooFar    = vision.DistanceTo(player) > 30f;
-        bool timedOut  = chaseTimer >= chaseDurationMax;
-
-        if (lostSight || tooFar || timedOut)
+        if (chaseTimer >= chaseDurationMax)
         {
             chaseTimer = 0f;
-            // Va a la última posición conocida y busca
             investigateTarget = lastKnownPlayerPos;
             SetState(enemyState.Search);
         }
@@ -202,7 +171,6 @@ public class enemyLogic : MonoBehaviour
         agent.speed = investigateSpeed;
         stateTimer -= Time.deltaTime;
 
-        // ¿Ve al jugador durante la búsqueda? → volver a perseguir
         if (vision.CanSeePlayer(player))
         {
             lastKnownPlayerPos = player.position;
@@ -212,14 +180,11 @@ public class enemyLogic : MonoBehaviour
 
         if (stateTimer <= 0f)
         {
-            float roll = Random.value;
-            if (roll < 0.5f)      SetState(enemyState.Patrol);
-            else if (roll < 0.75f) SetState(enemyState.Investigate);
-            else                   SetState(enemyState.Vanish);
+            // Nunca desaparece: siempre vuelve a patrullar o investigar
+            if (Random.value < 0.6f) SetState(enemyState.Patrol);
+            else                     SetState(enemyState.Investigate);
         }
     }
-
-    // ── Transición de estados ────────────────────────────────────────────────
 
     public void SetState(enemyState newState)
     {
@@ -230,21 +195,19 @@ public class enemyLogic : MonoBehaviour
         switch (newState)
         {
             case enemyState.Dormant:
-                agent.enabled = false;
-                gameObject.SetActive(false);
+                // Solo se usa en el primer frame antes del spawn
+                if (agent.enabled) agent.isStopped = true;
                 break;
 
             case enemyState.Spawn:
                 stateTimer = spawnDuration;
                 agent.isStopped = false;
-                StartCoroutine(FadeRenderers(0f, 1f, spawnDuration));
                 audio.PlaySpawn();
                 break;
 
             case enemyState.Patrol:
                 agent.isStopped = false;
                 audio.PlayPatrol();
-                // Si hay nodos asignados, ir al primero; si no, deambular
                 if (patrolNodes != null && patrolNodes.Length > 0)
                     agent.SetDestination(patrolNodes[patrolIndex].position);
                 else
@@ -275,12 +238,12 @@ public class enemyLogic : MonoBehaviour
                 break;
 
             case enemyState.Vanish:
-                StartCoroutine(VanishCoroutine());
+                // En lugar de desaparecer para siempre, se teletransporta y sigue
+                TeleportNearPlayer();
+                SetState(enemyState.Patrol);
                 break;
         }
     }
-
-    // ── Helpers de movimiento ────────────────────────────────────────────────
 
     private void MoveToNextPatrolNode()
     {
@@ -298,13 +261,11 @@ public class enemyLogic : MonoBehaviour
         }
     }
 
-    /// <summary>Busca un punto aleatorio en el NavMesh cercano para deambular.</summary>
     private void WanderNearby()
     {
         Vector3 randomDir = Random.insideUnitSphere * 15f;
         randomDir += transform.position;
         randomDir.y = transform.position.y;
-
         if (NavMesh.SamplePosition(randomDir, out NavMeshHit hit, 15f, NavMesh.AllAreas))
             agent.SetDestination(hit.position);
     }
@@ -316,48 +277,47 @@ public class enemyLogic : MonoBehaviour
         return Vector3.Dot(player.forward, toEnemy) > 0.85f;
     }
 
-    // ── Coroutines ───────────────────────────────────────────────────────────
-
-    private IEnumerator VanishCoroutine()
+    /// <summary>Teletransporta al enemigo a un punto fuera del FOV del jugador.</summary>
+    private void TeleportNearPlayer()
     {
-        agent.isStopped = true;
-        audio.PlayVanish();
-        yield return StartCoroutine(FadeRenderers(1f, 0f, vanishDuration));
-        agent.isStopped = false;
-        SetState(enemyState.Dormant);
-    }
+        if (player == null) return;
 
-    private IEnumerator FadeRenderers(float from, float to, float duration)
-    {
-        float elapsed = 0f;
-        while (elapsed < duration)
+        for (int i = 0; i < 30; i++)
         {
-            elapsed += Time.deltaTime;
-            float alpha = Mathf.Lerp(from, to, elapsed / duration);
-            SetAlpha(alpha);
-            yield return null;
-        }
-        SetAlpha(to);
-    }
+            float   angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            float   dist  = Random.Range(12f, 28f);
+            Vector3 cand  = player.position + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist);
 
-    private void SetAlpha(float alpha)
-    {
-        foreach (var r in renderers)
+            if (!NavMesh.SamplePosition(cand, out NavMeshHit hit, 6f, NavMesh.AllAreas)) continue;
+
+            // Evitar spawnear justo delante del jugador
+            Vector3 toPoint = (hit.position - player.position).normalized;
+            if (Vector3.Dot(player.forward, toPoint) > 0.4f) continue;
+
+            agent.enabled = false;
+            transform.position = hit.position;
+            agent.enabled = true;
+            return;
+        }
+
+        // Fallback sin restricción de ángulo
+        for (int i = 0; i < 10; i++)
         {
-            if (r == null) continue;
-            Color c = r.material.color;
-            c.a = alpha;
-            r.material.color = c;
+            float   angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            float   dist  = Random.Range(12f, 28f);
+            Vector3 cand  = player.position + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist);
+            if (!NavMesh.SamplePosition(cand, out NavMeshHit hit, 8f, NavMesh.AllAreas)) continue;
+            agent.enabled = false;
+            transform.position = hit.position;
+            agent.enabled = true;
+            return;
         }
     }
 
-    // ── API pública ──────────────────────────────────────────────────────────
-
-    /// <summary>Llamado por enemySpawner después de posicionar al enemigo.</summary>
     public void ActivateFromSpawn()
     {
-        gameObject.SetActive(true);
-        agent.enabled = true;
+        if (!agent.enabled) agent.enabled = true;
+        agent.isStopped = false;
         SetState(enemyState.Spawn);
     }
 
