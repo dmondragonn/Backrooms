@@ -20,10 +20,10 @@ public class EnemySceneFixer : EditorWindow
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
             "Este script corrige:\n" +
-            "1. Desactiva el GameObject Enemy\n" +
-            "2. Corrige posicion de la Capsula hijo\n" +
-            "3. Agrega enemySpawner al hijo EnemySpawner\n" +
-            "4. Sincroniza valores con el codigo actual",
+            "1. Mantiene Enemy ACTIVO (ya no usa SetActive false)\n" +
+            "2. Corrige posicion de la Capsula hijo a (0,0,0)\n" +
+            "3. Agrega enemySpawner al hijo EnemySpawner si falta\n" +
+            "4. Sincroniza valores de enemyLogic y enemyAudio",
             MessageType.Info);
     }
 
@@ -38,11 +38,11 @@ public class EnemySceneFixer : EditorWindow
 
         Undo.RegisterFullObjectHierarchyUndo(enemy, "Fix Enemy Setup");
 
-        // 1. Desactivar Enemy
-        enemy.SetActive(false);
-        Debug.Log("[EnemySceneFixer] Enemy desactivado.");
+        // 1. El Enemy debe estar ACTIVO — el enemigo se oculta via renderers, no SetActive
+        enemy.SetActive(true);
+        Debug.Log("[EnemySceneFixer] Enemy activo.");
 
-        // 2. Corregir posicion de la Capsula hijo
+        // 2. Corregir posicion del hijo visual (Capsule o modelo)
         Transform capsule = enemy.transform.Find("Capsule");
         if (capsule != null)
         {
@@ -58,7 +58,7 @@ public class EnemySceneFixer : EditorWindow
             if (spawnerObj.GetComponent<enemySpawner>() == null)
             {
                 spawnerObj.gameObject.AddComponent<enemySpawner>();
-                Debug.Log("[EnemySceneFixer] Componente enemySpawner agregado al hijo EnemySpawner.");
+                Debug.Log("[EnemySceneFixer] Componente enemySpawner agregado.");
             }
             else
             {
@@ -74,18 +74,18 @@ public class EnemySceneFixer : EditorWindow
             Debug.Log("[EnemySceneFixer] Hijo EnemySpawner creado con componente enemySpawner.");
         }
 
-        // 4. Sincronizar valores de enemyLogic con el codigo actual
+        // 4. Sincronizar valores de enemyLogic
         enemyLogic logic = enemy.GetComponent<enemyLogic>();
         if (logic != null)
         {
             SerializedObject so = new SerializedObject(logic);
             so.FindProperty("patrolSpeed").floatValue      = 2.5f;
-            so.FindProperty("chaseSpeed").floatValue       = 5f;
+            so.FindProperty("chaseSpeed").floatValue       = 3.8f;
             so.FindProperty("investigateSpeed").floatValue = 3f;
             so.FindProperty("searchDuration").floatValue   = 10f;
             so.FindProperty("stalkDuration").floatValue    = 4f;
             so.FindProperty("chaseDurationMax").floatValue = 20f;
-            so.FindProperty("vanishDuration").floatValue   = 1.2f;
+            so.FindProperty("spawnDuration").floatValue    = 1.2f;
             so.FindProperty("aggressionRate").floatValue   = 0.005f;
             so.FindProperty("aggressionMax").floatValue    = 3f;
             so.ApplyModifiedProperties();
@@ -96,7 +96,7 @@ public class EnemySceneFixer : EditorWindow
             Debug.LogWarning("[EnemySceneFixer] No se encontro componente enemyLogic en Enemy.");
         }
 
-        // 5. Sincronizar valores de enemyAudio con el codigo actual
+        // 5. Sincronizar valores de enemyAudio
         enemyAudio audio = enemy.GetComponent<enemyAudio>();
         if (audio != null)
         {
@@ -113,6 +113,6 @@ public class EnemySceneFixer : EditorWindow
         }
 
         EditorUtility.SetDirty(enemy);
-        Debug.Log("[EnemySceneFixer] Todos los problemas corregidos. Guarda la escena con Ctrl+S.");
+        Debug.Log("[EnemySceneFixer] Listo. Guarda la escena con Ctrl+S.");
     }
 }
