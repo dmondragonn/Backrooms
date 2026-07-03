@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using Unity.AI.Navigation;
 
 // Backrooms "Level Fun" generator: white walls with doodles, red spotted carpet,
 // wide pillared halls and enclosed rooms, party tables with balloons, bright
@@ -53,6 +54,7 @@ public class Level2Generator : MonoBehaviour
 
     public void Generate()
     {
+        MazeGenerator.NavMeshReady = false;
         rng = seed == 0 ? new System.Random() : new System.Random(seed);
         MakeMaterials();
         SetupPostFX();
@@ -298,7 +300,20 @@ public class Level2Generator : MonoBehaviour
         foreach (var t in tableCells) PartyTable(Cell(t.x, t.y));
 
         GroundCollider(); // one flat collider instead of 1 per floor cell
+
+        var surface = GetComponent<NavMeshSurface>();
+        if (surface == null) surface = gameObject.AddComponent<NavMeshSurface>();
+        surface.collectObjects = CollectObjects.Children;
+        surface.overrideVoxelSize = true;
+        surface.voxelSize = 0.2f;
+        surface.overrideTileSize = true;
+        surface.tileSize = 256;
+        surface.BuildNavMesh();
+
         StaticBatchingUtility.Combine(geo.gameObject);
+        Debug.Log("[Level2Generator] NavMesh bakeado. Enemigo puede activarse.");
+
+        MazeGenerator.NavMeshReady = true;
         if (spawnPlayer) SpawnPlayer();
     }
 

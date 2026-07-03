@@ -103,6 +103,7 @@ public class Level3Generator : MonoBehaviour
     [ContextMenu("Generate")]
     public void Generate()
     {
+        MazeGenerator.NavMeshReady = false;
         ClearOld();
         SetupLook();
         SetupPostFX();
@@ -151,6 +152,7 @@ public class Level3Generator : MonoBehaviour
 
         if (bridgeGap) BuildBridge();
         AddFill(spawnPos + Vector3.up * 4f, 1.4f, 30f);
+        MazeGenerator.NavMeshReady = true;
         if (spawnPlayer && haveSpawn && Application.isPlaying) SpawnPlayer();
     }
 

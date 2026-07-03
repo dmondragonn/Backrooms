@@ -34,7 +34,7 @@ public class enemyLogic : MonoBehaviour
 
     private NavMeshAgent agent;
     private enemyVision  vision;
-    private enemyAudio   audio;
+    private enemyAudio   audioComp;
 
     private float   stateTimer;
     private float   chaseTimer;
@@ -47,7 +47,7 @@ public class enemyLogic : MonoBehaviour
     {
         agent  = GetComponent<NavMeshAgent>();
         vision = GetComponent<enemyVision>();
-        audio  = GetComponent<enemyAudio>();
+        audioComp = GetComponent<enemyAudio>();
         agent.enabled = false;
     }
 
@@ -85,7 +85,7 @@ public class enemyLogic : MonoBehaviour
             return;
         }
 
-        if (audio.CanHearPlayer(player, playerNoise))
+        if (audioComp.CanHearPlayer(player, playerNoise))
         {
             investigateTarget = player.position;
             SetState(enemyState.Investigate);
@@ -190,7 +190,7 @@ public class enemyLogic : MonoBehaviour
     {
         CurrentState = newState;
         stateTimer   = 0f;
-        audio.StopAudio();
+        audioComp.StopAudio();
 
         switch (newState)
         {
@@ -202,12 +202,12 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Spawn:
                 stateTimer = spawnDuration;
                 agent.isStopped = false;
-                audio.PlaySpawn();
+                audioComp.PlaySpawn();
                 break;
 
             case enemyState.Patrol:
                 agent.isStopped = false;
-                audio.PlayPatrol();
+                audioComp.PlayPatrol();
                 if (patrolNodes != null && patrolNodes.Length > 0)
                     agent.SetDestination(patrolNodes[patrolIndex].position);
                 else
@@ -217,7 +217,7 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Stalk:
                 agent.isStopped = true;
                 stateTimer = stalkDuration + Random.Range(-1f, 2f);
-                audio.PlayStalk();
+                audioComp.PlayStalk();
                 break;
 
             case enemyState.Investigate:
@@ -228,7 +228,7 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Chase:
                 agent.isStopped = false;
                 chaseTimer = 0f;
-                audio.PlayChase();
+                audioComp.PlayChase();
                 break;
 
             case enemyState.Search:
@@ -317,6 +317,11 @@ public class enemyLogic : MonoBehaviour
     public void ActivateFromSpawn()
     {
         if (!agent.enabled) agent.enabled = true;
+        if (!agent.isOnNavMesh)
+        {
+            Debug.LogWarning("[enemyLogic] No se pudo activar el enemigo porque no está sobre un NavMesh válido.");
+            return;
+        }
         agent.isStopped = false;
         SetState(enemyState.Spawn);
     }

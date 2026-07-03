@@ -16,7 +16,7 @@ public class enemySpawner : MonoBehaviour
     [SerializeField] private int   candidatePoints  = 40;
 
     [Header("Tiempos")]
-    [SerializeField] private float firstSpawnDelay = 4f;
+    [SerializeField] private float firstSpawnDelay = 1f;
 
     [Header("Debug")]
     [SerializeField] private bool showDebugGizmos = false;
@@ -37,27 +37,37 @@ public class enemySpawner : MonoBehaviour
 
         yield return new WaitForSeconds(firstSpawnDelay);
 
-        // Buscar jugador si no está asignado
-        if (player == null)
+        // Reintentar hasta encontrar al jugador (se crea en runtime por MazeGenerator)
+        for (int i = 0; i < 20; i++)
         {
-            var p = GameObject.Find("Player");
-            if (p != null)
+            if (player == null)
             {
-                player       = p.transform;
-                playerCamera = p.GetComponentInChildren<Camera>();
+                var p = GameObject.Find("Player");
+                if (p != null)
+                {
+                    player       = p.transform;
+                    playerCamera = p.GetComponentInChildren<Camera>();
+                }
             }
+            if (player != null) break;
+            yield return new WaitForSeconds(0.5f);
         }
 
         if (player == null)
         {
-            Debug.LogWarning("[enemySpawner] No se encontró al jugador.");
+            Debug.LogWarning("[enemySpawner] No se encontró al jugador tras varios intentos.");
             yield break;
         }
 
         if (!FindSpawnPosition(out Vector3 pos))
         {
-            Debug.LogWarning("[enemySpawner] No se encontró posición de spawn. Usando posición actual.");
-            pos = transform.parent.position;
+            if (!TryGetAnyNavMeshPoint(out pos))
+            {
+                Debug.LogWarning("[enemySpawner] No se encontró posición de spawn y no hay NavMesh utilizable. Abortando spawn.");
+                yield break;
+            }
+
+            Debug.LogWarning("[enemySpawner] No se encontró posición de spawn cerca del jugador. Usando otro punto válido del NavMesh.");
         }
 
         NavMeshAgent agent = transform.parent.GetComponent<NavMeshAgent>();
@@ -107,6 +117,31 @@ public class enemySpawner : MonoBehaviour
                 result = hit.position;
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    private bool TryGetAnyNavMeshPoint(out Vector3 result)
+    {
+        result = Vector3.zero;
+        var triangulation = NavMesh.CalculateTriangulation();
+        if (triangulation.vertices == null || triangulation.indices == null || triangulation.indices.Length < 3)
+            return false;
+
+        int triangleCount = triangulation.indices.Length / 3;
+        for (int i = 0; i < triangleCount; i++)
+        {
+            int i0 = triangulation.indices[i * 3];
+            int i1 = triangulation.indices[i * 3 + 1];
+            int i2 = triangulation.indices[i * 3 + 2];
+            if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+
+            Vector3 centroid = (triangulation.vertices[i0] + triangulation.vertices[i1] + triangulation.vertices[i2]) / 3f;
+            if (playerCamera != null && IsInFrustum(centroid)) continue;
+
+            result = centroid;
+            return true;
         }
 
         return false;
