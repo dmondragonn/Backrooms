@@ -11,8 +11,8 @@ public class enemySpawner : MonoBehaviour
     public Camera    playerCamera;
 
     [Header("Distancias de spawn")]
-    [SerializeField] private float spawnDistanceMin = 15f;
-    [SerializeField] private float spawnDistanceMax = 35f;
+    [SerializeField] private float spawnDistanceMin = 5f;
+    [SerializeField] private float spawnDistanceMax = 25f;
     [SerializeField] private int   candidatePoints  = 40;
 
     [Header("Tiempos")]
