@@ -305,6 +305,26 @@ MonoBehaviour:
   buildCeiling: 1
   buildChunkCols: 2
   spawnPlayer: 1
+  playerFootstepClips:
+  - {fileID: 8300000, guid: 9ad121ab38287418181677794ba096e3, type: 3}
+  - {fileID: 8300000, guid: dbc04c332be0446e199fa1cf06bf23e2, type: 3}
+  - {fileID: 8300000, guid: d9094dddc7a1f432790a16b0fe20b991, type: 3}
+  - {fileID: 8300000, guid: 0c8cdb4bba484445caf7b030460dc4e4, type: 3}
+  - {fileID: 8300000, guid: e41d4d321ee754de789205fc70e6917b, type: 3}
+  - {fileID: 8300000, guid: 6de9119c7ada44b4bafdb152214112e6, type: 3}
+  - {fileID: 8300000, guid: 0a637676c89234f31908ae16f235b7a5, type: 3}
+  - {fileID: 8300000, guid: ccae538dca73c46cfa13ddb17b204b0f, type: 3}
+  - {fileID: 8300000, guid: 3b21d1d1d75fc4934bbebff3bff2e29a, type: 3}
+  - {fileID: 8300000, guid: cec539771201b480cb5405f22e57572a, type: 3}
+  - {fileID: 8300000, guid: b2ab732805f004d5da03535e6e12e570, type: 3}
+  - {fileID: 8300000, guid: 8fd173d5e9a2d4184bda84648ba14494, type: 3}
+  - {fileID: 8300000, guid: 156d4669a771e4bd48b5469ae1e5de83, type: 3}
+  - {fileID: 8300000, guid: 2a6069d0212a64f35bdc42f3e819316d, type: 3}
+  - {fileID: 8300000, guid: 45419ffd5a9a1406582f75806ed58e2d, type: 3}
+  - {fileID: 8300000, guid: 99ea84edb6d7f4bee8268c1c2d675776, type: 3}
+  - {fileID: 8300000, guid: 2805824df520344579e2fb0c6f4bb998, type: 3}
+  - {fileID: 8300000, guid: 92ae22fa4efd74e72a2aac01697e6f1c, type: 3}
+  - {fileID: 8300000, guid: 1600f583253e54e67a320a6c751354cc, type: 3}
   wallColor: {r: 0.92, g: 0.9, b: 0.84, a: 1}
   ceilingColor: {r: 0.95, g: 0.95, b: 0.95, a: 1}
   carpetColor: {r: 0.55, g: 0.07, b: 0.07, a: 1}
@@ -499,7 +519,7 @@ Transform:
   m_GameObject: {fileID: 2634371486}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 8, y: 0, z: 8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

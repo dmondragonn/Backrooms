@@ -49,6 +49,9 @@ public class MazeGenerator : MonoBehaviour
     public float beamHeight = 0.5f;
     public float voidDepth = 8f;
 
+    [Header("Player Audio")]
+    public AudioClip[] playerFootstepClips;
+
     Material wallMat, floorMat, ceilMat, lightMat, darkMat, metalMat, buttonMat, panelMat, labelMat;
     Transform geo;
     bool[,] wallN, wallE, wallS, wallW;
@@ -351,6 +354,7 @@ public class MazeGenerator : MonoBehaviour
         Destroy(p.GetComponent<Collider>());
         p.transform.position = CellCenter(0, 0) + Vector3.up * 1.1f;
         var playerComp = p.AddComponent<SimplePlayer>();
+        playerComp.footstepClips = playerFootstepClips;
 
         // Asignar jugador al spawner automáticamente
         var spawner = FindFirstObjectByType<enemySpawner>();

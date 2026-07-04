@@ -20,6 +20,9 @@ public class Level2Generator : MonoBehaviour
     public int buildChunkCols = 2;
     public bool spawnPlayer = true;
 
+    [Header("Player Audio")]
+    public AudioClip[] playerFootstepClips;
+
     [Header("Colors")]
     public Color wallColor    = new Color(0.92f, 0.90f, 0.84f); // off-white walls
     public Color ceilingColor = new Color(0.95f, 0.95f, 0.95f); // white ceiling
@@ -414,6 +417,7 @@ public class Level2Generator : MonoBehaviour
         p.name = "Player";
         Destroy(p.GetComponent<Collider>());
         p.transform.position = Cell(0, 0) + Vector3.up * 1.1f;
-        p.AddComponent<SimplePlayer>();
+        var playerComp = p.AddComponent<SimplePlayer>();
+        playerComp.footstepClips = playerFootstepClips;
     }
 }

@@ -18,6 +18,9 @@ public class Level3Generator : MonoBehaviour
     public bool includeHints = true;
     public float worldScale = 1f;
 
+    [Header("Player Audio")]
+    public AudioClip[] playerFootstepClips;
+
     [Header("Hints placement (drag HintsRoot in Scene to fit)")]
     // model has openings only on its long sides + closed X ends. To make the hall run
     // IN LINE with the corridor, rotate 90 and cut open the +X end so you enter lengthwise.
@@ -414,6 +417,7 @@ public class Level3Generator : MonoBehaviour
         p.name = "Player";
         Destroy(p.GetComponent<Collider>());
         p.transform.position = spawnPos;
-        p.AddComponent<SimplePlayer>();
+        var playerComp = p.AddComponent<SimplePlayer>();
+        playerComp.footstepClips = playerFootstepClips;
     }
 }

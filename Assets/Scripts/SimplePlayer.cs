@@ -21,6 +21,12 @@ public class SimplePlayer : MonoBehaviour
     public float doubleTapWindow = 0.3f;
     public float staminaRegenPerSecond = 0.9f;
 
+    [Header("Footsteps")]
+    public AudioClip[] footstepClips;
+    public float stepIntervalWalk = 0.5f;
+    public float stepIntervalSprint = 0.32f;
+    [Range(0f, 1f)] public float footstepVolume = 0.7f;
+
     [Header("Look")]
     public float mouseSensitivity = 0.1f;
 
@@ -47,6 +53,8 @@ public class SimplePlayer : MonoBehaviour
     [HideInInspector] public bool canMove = true; // look still works when false (elevator intro)
 
     CharacterController cc;
+    AudioSource audioSource;
+    float stepTimer;
     Transform cam;
     Vector3 camBaseLocalPos;
     Vector3 spawnPos;
@@ -68,6 +76,8 @@ public class SimplePlayer : MonoBehaviour
     void Start()
     {
         cc = GetComponent<CharacterController>();
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
         spawnPos = transform.position;
         currentStamina = sprintDuration;
 
@@ -105,6 +115,7 @@ public class SimplePlayer : MonoBehaviour
         Look();
         HandleWorldClicks();
         Move();
+        HandleFootsteps();
         UpdateCameraMotion();
         UpdateStaminaUI();
 
@@ -187,6 +198,30 @@ public class SimplePlayer : MonoBehaviour
 
         move.y = vSpeed;
         cc.Move(move * Time.deltaTime);
+    }
+
+    void HandleFootsteps()
+    {
+        bool moving = cc.isGrounded && currentMoveAmount > 0.1f;
+        if (!moving)
+        {
+            stepTimer = 0f;
+            return;
+        }
+
+        stepTimer -= Time.deltaTime;
+        if (stepTimer <= 0f)
+        {
+            PlayFootstep();
+            stepTimer = isSprinting ? stepIntervalSprint : stepIntervalWalk;
+        }
+    }
+
+    void PlayFootstep()
+    {
+        if (footstepClips == null || footstepClips.Length == 0 || audioSource == null) return;
+        AudioClip clip = footstepClips[Random.Range(0, footstepClips.Length)];
+        audioSource.PlayOneShot(clip, footstepVolume);
     }
 
     void UpdateCameraMotion()
