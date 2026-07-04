@@ -384,6 +384,7 @@ MonoBehaviour:
   spawnDistanceMin: 15
   spawnDistanceMax: 35
   candidatePoints: 40
+  spawnFloorY: 0
   firstSpawnDelay: 1
   showDebugGizmos: 0
 --- !u!1 &2634371486
@@ -499,7 +500,7 @@ Transform:
   m_GameObject: {fileID: 2634371486}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 8, y: 0, z: 8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
