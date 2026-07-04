@@ -2,7 +2,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.Rendering;
 
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(enemyVision))]
@@ -50,8 +49,6 @@ public class enemyLogic : MonoBehaviour
         vision = GetComponent<enemyVision>();
         audioComp = GetComponent<enemyAudio>();
         agent.enabled = false;
-
-        NormalizeModelMaterials();
     }
 
     private void Update()
@@ -336,38 +333,4 @@ public class enemyLogic : MonoBehaviour
     public void SetPlayerNoise(EnemyNoiseLevel level) => playerNoise = level;
     public void AddAggression(float amount) =>
         Aggression = Mathf.Min(Aggression + amount, aggressionMax);
-
-    private void NormalizeModelMaterials()
-    {
-        var texture = Resources.Load<Texture2D>("captain-clark/textures/texture_pbr_20250901");
-        if (texture == null) return;
-
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null) shader = Shader.Find("Standard");
-        if (shader == null) return;
-
-        foreach (var rendererComponent in GetComponentsInChildren<Renderer>(true))
-        {
-            var materials = rendererComponent.materials;
-            for (int i = 0; i < materials.Length; i++)
-            {
-                var material = materials[i];
-                if (material == null) continue;
-
-                material.shader = shader;
-
-                if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
-                if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
-                if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
-                if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
-                if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.05f);
-
-                material.mainTexture = texture;
-                material.mainTextureScale = Vector2.one;
-                material.mainTextureOffset = Vector2.zero;
-            }
-
-            rendererComponent.materials = materials;
-        }
-    }
 }
