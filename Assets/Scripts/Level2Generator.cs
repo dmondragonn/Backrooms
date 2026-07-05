@@ -23,6 +23,11 @@ public class Level2Generator : MonoBehaviour
     [Header("Player Audio")]
     public AudioClip[] playerFootstepClips;
 
+    [Header("Music")]
+    public bool playMusic = true;
+    public string musicResource = "Level2Music"; // Resources/Level2Music.mp3
+    [Range(0f, 1f)] public float musicVolume = 0.5f;
+
     [Header("Colors")]
     public Color wallColor    = new Color(0.92f, 0.90f, 0.84f); // off-white walls
     public Color ceilingColor = new Color(0.95f, 0.95f, 0.95f); // white ceiling
@@ -32,7 +37,7 @@ public class Level2Generator : MonoBehaviour
 
     [Header("Lights")]
     public float lightSpacing = 1.5f;
-    public float realLightSpacing = 3f;
+    public float realLightSpacing = 4f;    // real point light every 4th lamp cell (fewer lights, same look)
     public float lightIntensity = 1.6f;
     public float lightRange = 12f;
 
@@ -326,7 +331,20 @@ public class Level2Generator : MonoBehaviour
         Debug.Log("[Level2Generator] NavMesh bakeado. Enemigo puede activarse.");
 
         MazeGenerator.NavMeshReady = true;
+        if (playMusic) PlayMusic();
         if (spawnPlayer) SpawnPlayer();
+    }
+
+    // looping 2D background music for the level
+    void PlayMusic()
+    {
+        var clip = Resources.Load<AudioClip>(musicResource);
+        if (clip == null) { Debug.LogWarning("Level2Generator: missing Resources/" + musicResource); return; }
+        var go = new GameObject("Music"); go.transform.SetParent(transform);
+        var src = go.AddComponent<AudioSource>();
+        src.clip = clip; src.loop = true; src.volume = musicVolume;
+        src.spatialBlend = 0f; src.playOnAwake = false;
+        src.Play();
     }
 
     HashSet<int> AxisMarks(int n, float spacing)
