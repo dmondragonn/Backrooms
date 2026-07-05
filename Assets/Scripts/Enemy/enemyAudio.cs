@@ -16,9 +16,10 @@ public class enemyAudio : MonoBehaviour
 
     [Header("Pasos (Footsteps)")]
     [SerializeField] private AudioClip[] footstepClips;
-    [SerializeField] private float baseStepsPerSecond = 2f;   // pasos por segundo A referenceSpeed
-    [SerializeField] private float referenceSpeed = 2.5f;      // usa tu patrolSpeed como referencia
+    [SerializeField] private float baseStepsPerSecond = 1f;    // pasos por segundo A referenceSpeed (bajo = lento)
+    [SerializeField] private float referenceSpeed = 2.5f;       // usa tu patrolSpeed como referencia
     [Range(0f, 1f)] [SerializeField] private float footstepVolume = 0.6f;
+    [Range(0f, 1f)] [SerializeField] private float limpUnevenness = 0.5f; // 0 = pasos parejos, 1 = cojera muy marcada
 
     [Header("Radios de audición")]
     [SerializeField] private float hearingRun  = 25f;
@@ -28,6 +29,7 @@ public class enemyAudio : MonoBehaviour
     private AudioSource src;
     private float stepTimer;
     private float growlTimer;
+    private bool  nextStepIsShort = true;
 
     private void Awake()
     {
@@ -38,6 +40,7 @@ public class enemyAudio : MonoBehaviour
         src.maxDistance  = 50f;
 
         growlTimer = Random.Range(minGrowlDelay, maxGrowlDelay);
+        stepTimer  = 1f / Mathf.Max(baseStepsPerSecond, 0.01f);
     }
 
     private void Update()
@@ -80,18 +83,23 @@ public class enemyAudio : MonoBehaviour
     {
         if (currentSpeed < 0.1f)
         {
-            stepTimer = 0f;
+            stepTimer = 1f / Mathf.Max(baseStepsPerSecond, 0.01f);
             return;
         }
 
         float stepsPerSecond = baseStepsPerSecond * (currentSpeed / referenceSpeed);
         float interval = 1f / Mathf.Max(stepsPerSecond, 0.01f);
 
+        // Cojera: alterna entre un paso corto y uno largo en vez de un ritmo parejo
+        float unevenFactor = nextStepIsShort ? (1f - limpUnevenness) : (1f + limpUnevenness);
+        interval *= unevenFactor;
+
         stepTimer -= Time.deltaTime;
         if (stepTimer <= 0f)
         {
             PlayFootstep();
             stepTimer = interval;
+            nextStepIsShort = !nextStepIsShort;
         }
     }
 
