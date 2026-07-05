@@ -16,10 +16,10 @@ public class SimplePlayer : MonoBehaviour
 
     [Header("Sprint")]
     public float sprintMultiplier = 1.6f;
-    public float sprintDuration = 1.5f;
+    public float sprintDuration = 3f;
     public float tiredDuration = 2f;
     public float doubleTapWindow = 0.3f;
-    public float staminaRegenPerSecond = 0.9f;
+    public float staminaRegenPerSecond = 1.2f;
 
     [Header("Footsteps")]
     public AudioClip[] footstepClips;
