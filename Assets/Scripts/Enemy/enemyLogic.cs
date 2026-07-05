@@ -69,6 +69,8 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Chase:       UpdateChase();       break;
             case enemyState.Search:      UpdateSearch();      break;
         }
+
+        audioComp.UpdateFootsteps(agent.velocity.magnitude);   // 👈 nueva línea
     }
 
     private void UpdateSpawn()

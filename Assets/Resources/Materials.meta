@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< Updated upstream:Assets/Resources/Materials.meta
 guid: 9995a56355fa7445da00835b15218f0d
+========
+guid: 1961d82a51ed34324b8d677e1b61e01f
+>>>>>>>> Stashed changes:Assets/Resources/juanjo_sound - Backrooms Entity SFX (Vol. 1).meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}

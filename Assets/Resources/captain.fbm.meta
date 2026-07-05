@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< Updated upstream:Assets/Resources/captain.fbm.meta
 guid: 315d4a52a5c884dd7b740d30105b6e1c
+========
+guid: 14b10146b0b934784bb39ed757caadb1
+>>>>>>>> Stashed changes:Assets/_Recovery.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}

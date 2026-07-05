@@ -1,6 +1,11 @@
 fileFormatVersion: 2
+<<<<<<<< Updated upstream:Assets/Resources/CaptainClarkController.controller.meta
 guid: b7efbd0c57611428696a30d7060cbc79
 NativeFormatImporter:
+========
+guid: df1452ec0aee34b408858c0bd3d3a962
+DefaultImporter:
+>>>>>>>> Stashed changes:Assets/_Recovery/0 (4).unity.meta
   externalObjects: {}
   mainObjectFileID: 9100000
   userData: 

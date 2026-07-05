@@ -1,6 +1,11 @@
 fileFormatVersion: 2
+<<<<<<<< Updated upstream:Assets/Resources/Materials/Image_0.001.mat.meta
 guid: b42dee96cc5b645ca91af5befcc47e50
 NativeFormatImporter:
+========
+guid: 91b3091325f20445f9b2ff989a7dfb38
+DefaultImporter:
+>>>>>>>> Stashed changes:Assets/_Recovery/0 (3).unity.meta
   externalObjects: {}
   mainObjectFileID: 2100000
   userData: 

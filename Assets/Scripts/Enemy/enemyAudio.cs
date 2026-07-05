@@ -21,6 +21,14 @@ public class enemyAudio : MonoBehaviour
     [SerializeField] private float hearingWalk = 10f;
     [SerializeField] private float hearingIdle =  2f;
 
+    [Header("Pasos (Footsteps)")]
+    [SerializeField] private AudioClip[] footstepClips;
+    [SerializeField] private float baseStepsPerSecond = 2f;   // pasos por segundo A referenceSpeed
+    [SerializeField] private float referenceSpeed = 2.5f;      // usa tu patrolSpeed como referencia
+    [Range(0f, 1f)] [SerializeField] private float footstepVolume = 0.6f;
+
+    private float stepTimer;
+
     private AudioSource src;
 
     private void Awake()
@@ -55,6 +63,7 @@ public class enemyAudio : MonoBehaviour
     public void PlaySpawn()        => PlayOneShot(clipSpawn);
     public void PlayVanish()       => PlayOneShot(clipVanish);
     public void PlayDistantScream()=> PlayOneShot(clipDistantScream);
+    
 
     public void StopAudio()
     {
@@ -74,5 +83,31 @@ public class enemyAudio : MonoBehaviour
     {
         if (clip == null) return;
         src.PlayOneShot(clip);
+    }
+
+    public void UpdateFootsteps(float currentSpeed)
+    {
+        if (currentSpeed < 0.1f)
+        {
+            stepTimer = 0f;
+            return;
+        }
+
+        float stepsPerSecond = baseStepsPerSecond * (currentSpeed / referenceSpeed);
+        float interval = 1f / Mathf.Max(stepsPerSecond, 0.01f);
+
+        stepTimer -= Time.deltaTime;
+        if (stepTimer <= 0f)
+        {
+            PlayFootstep();
+            stepTimer = interval;
+        }
+    }
+
+    private void PlayFootstep()
+    {
+        if (footstepClips == null || footstepClips.Length == 0) return;
+        AudioClip clip = footstepClips[Random.Range(0, footstepClips.Length)];
+        src.PlayOneShot(clip, footstepVolume);
     }
 }
