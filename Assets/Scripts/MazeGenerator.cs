@@ -101,6 +101,15 @@ public class MazeGenerator : MonoBehaviour
         grain.type.Override(FilmGrainLookup.Medium1);
         grain.intensity.Override(0.22f);
 
+        var chroma = profile.Add<ChromaticAberration>(true);
+        chroma.intensity.Override(0.35f);
+
+        var lens = profile.Add<LensDistortion>(true);
+        lens.intensity.Override(-0.25f);
+        lens.xMultiplier.Override(1f);
+        lens.yMultiplier.Override(1f);
+        lens.scale.Override(1.1f);
+
         var go = new GameObject("PostFX");
         go.transform.SetParent(transform);
         var v = go.AddComponent<Volume>();
@@ -356,22 +365,25 @@ public class MazeGenerator : MonoBehaviour
         var playerComp = p.AddComponent<SimplePlayer>();
         playerComp.footstepClips = playerFootstepClips;
 
-        // Asignar jugador al spawner automáticamente
-        var spawner = FindFirstObjectByType<enemySpawner>();
-        if (spawner != null)
+        // Asignar jugador a todos los enemySpawner de la escena
+        var spawners = FindObjectsByType<enemySpawner>(FindObjectsSortMode.None);
+        foreach (var spawner in spawners)
         {
             spawner.player       = p.transform;
             spawner.playerCamera = p.GetComponentInChildren<Camera>();
             Debug.Log("[MazeGenerator] Jugador asignado al enemySpawner.");
         }
 
-        // Asignar jugador a enemyLogic también por si acaso
-        var logic = FindFirstObjectByType<enemyLogic>();
-        if (logic != null)
+        // Asignar jugador a todos los enemyLogic de la escena
+        var logics = FindObjectsByType<enemyLogic>(FindObjectsSortMode.None);
+        foreach (var logic in logics)
         {
             logic.player = p.transform;
             Debug.Log("[MazeGenerator] Jugador asignado al enemyLogic.");
         }
+
+        // Crear el detector de captura (derrota -> pantalla y reintentar nivel)
+        new GameObject("CatchDetector").AddComponent<CatchDetector>();
 
         if (elevatorIntro) BuildElevator(CellCenter(0, 0), playerComp);
     }

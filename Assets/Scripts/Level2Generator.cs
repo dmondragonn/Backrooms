@@ -159,6 +159,15 @@ public class Level2Generator : MonoBehaviour
         grain.type.Override(FilmGrainLookup.Thin1);
         grain.intensity.Override(0.12f);
 
+        var chroma = p.Add<ChromaticAberration>(true);
+        chroma.intensity.Override(0.35f);
+
+        var lens = p.Add<LensDistortion>(true);
+        lens.intensity.Override(-0.25f);
+        lens.xMultiplier.Override(1f);
+        lens.yMultiplier.Override(1f);
+        lens.scale.Override(1.1f);
+
         var go = new GameObject("PostFX");
         go.transform.SetParent(transform);
         var v = go.AddComponent<Volume>();
@@ -419,5 +428,25 @@ public class Level2Generator : MonoBehaviour
         p.transform.position = Cell(0, 0) + Vector3.up * 1.1f;
         var playerComp = p.AddComponent<SimplePlayer>();
         playerComp.footstepClips = playerFootstepClips;
+
+        // Asignar jugador a todos los enemySpawner de la escena
+        var spawners = FindObjectsByType<enemySpawner>(FindObjectsSortMode.None);
+        foreach (var spawner in spawners)
+        {
+            spawner.player       = p.transform;
+            spawner.playerCamera = p.GetComponentInChildren<Camera>();
+            Debug.Log("[Level2Generator] Jugador asignado al enemySpawner.");
+        }
+
+        // Asignar jugador a todos los enemyLogic de la escena
+        var logics = FindObjectsByType<enemyLogic>(FindObjectsSortMode.None);
+        foreach (var logic in logics)
+        {
+            logic.player = p.transform;
+            Debug.Log("[Level2Generator] Jugador asignado al enemyLogic.");
+        }
+
+        // Crear el detector de captura (derrota -> pantalla y reintentar nivel)
+        new GameObject("CatchDetector").AddComponent<CatchDetector>();
     }
 }
