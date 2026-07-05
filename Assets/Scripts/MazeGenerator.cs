@@ -420,9 +420,7 @@ public class MazeGenerator : MonoBehaviour
         float px = half - 0.082f;
         float cz = half * 0.62f;
         var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        // Custom/TextDepth: alpha from font atlas, RGB from TextMesh vertex color
-        // (URP/Unlit ignores vertex color -> the red digit was invisible)
-        labelMat = new Material(Shader.Find("Custom/TextDepth"));
+        labelMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         Color red  = new Color(1f, 0.15f, 0.05f);
         Color dark = new Color(0.08f, 0.08f, 0.08f);
         float zL = cz - 0.09f, zR = cz + 0.09f;
