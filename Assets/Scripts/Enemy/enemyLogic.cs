@@ -66,6 +66,8 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Chase:       UpdateChase();       break;
             case enemyState.Search:      UpdateSearch();      break;
         }
+
+        audioComp.UpdateFootsteps(agent.velocity.magnitude);
     }
 
     private void UpdateSpawn()
@@ -190,7 +192,6 @@ public class enemyLogic : MonoBehaviour
     {
         CurrentState = newState;
         stateTimer   = 0f;
-        audioComp.StopAudio();
 
         switch (newState)
         {
@@ -202,12 +203,10 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Spawn:
                 stateTimer = spawnDuration;
                 agent.isStopped = false;
-                audioComp.PlaySpawn();
                 break;
 
             case enemyState.Patrol:
                 agent.isStopped = false;
-                audioComp.PlayPatrol();
                 if (patrolNodes != null && patrolNodes.Length > 0)
                     agent.SetDestination(patrolNodes[patrolIndex].position);
                 else
@@ -217,7 +216,6 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Stalk:
                 agent.isStopped = true;
                 stateTimer = stalkDuration + Random.Range(-1f, 2f);
-                audioComp.PlayStalk();
                 break;
 
             case enemyState.Investigate:
@@ -228,7 +226,6 @@ public class enemyLogic : MonoBehaviour
             case enemyState.Chase:
                 agent.isStopped = false;
                 chaseTimer = 0f;
-                audioComp.PlayChase();
                 break;
 
             case enemyState.Search:

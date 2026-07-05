@@ -1,5 +1,5 @@
 // enemyAudio.cs
-// Controla sonidos del enemigo y sistema de audición.
+// Controla sonidos del enemigo (gruñidos ambientales) y sistema de audición.
 // Adjunta al mismo GameObject que enemyLogic.
 
 using UnityEngine;
@@ -8,13 +8,17 @@ public enum EnemyNoiseLevel { Idle, Walking, Running }
 
 public class enemyAudio : MonoBehaviour
 {
-    [Header("Clips de audio (opcionales)")]
-    [SerializeField] private AudioClip clipPatrol;
-    [SerializeField] private AudioClip clipChase;
-    [SerializeField] private AudioClip clipStalk;
-    [SerializeField] private AudioClip clipSpawn;
-    [SerializeField] private AudioClip clipVanish;
-    [SerializeField] private AudioClip clipDistantScream;
+    [Header("Gruñidos")]
+    [SerializeField] private AudioClip[] growlClips;
+    [SerializeField] private float minGrowlDelay = 4f;   // silencio mínimo entre gruñidos
+    [SerializeField] private float maxGrowlDelay = 10f;  // silencio máximo (= min para un valor fijo)
+    [Range(0f, 1f)] [SerializeField] private float growlVolume = 0.8f;
+
+    [Header("Pasos (Footsteps)")]
+    [SerializeField] private AudioClip[] footstepClips;
+    [SerializeField] private float baseStepsPerSecond = 2f;   // pasos por segundo A referenceSpeed
+    [SerializeField] private float referenceSpeed = 2.5f;      // usa tu patrolSpeed como referencia
+    [Range(0f, 1f)] [SerializeField] private float footstepVolume = 0.6f;
 
     [Header("Radios de audición")]
     [SerializeField] private float hearingRun  = 25f;
@@ -22,6 +26,8 @@ public class enemyAudio : MonoBehaviour
     [SerializeField] private float hearingIdle =  2f;
 
     private AudioSource src;
+    private float stepTimer;
+    private float growlTimer;
 
     private void Awake()
     {
@@ -30,6 +36,18 @@ public class enemyAudio : MonoBehaviour
         src.spatialBlend = 1f;
         src.rolloffMode  = AudioRolloffMode.Linear;
         src.maxDistance  = 50f;
+
+        growlTimer = Random.Range(minGrowlDelay, maxGrowlDelay);
+    }
+
+    private void Update()
+    {
+        growlTimer -= Time.deltaTime;
+        if (growlTimer <= 0f)
+        {
+            PlayGrowl();
+            growlTimer = Random.Range(minGrowlDelay, maxGrowlDelay);
+        }
     }
 
     // ── Audición ─────────────────────────────────────────────────────────────
@@ -47,32 +65,40 @@ public class enemyAudio : MonoBehaviour
         return dist <= radius;
     }
 
-    // ── Reproducción ─────────────────────────────────────────────────────────
+    // ── Gruñidos ─────────────────────────────────────────────────────────────
 
-    public void PlayPatrol()       => PlayLooped(clipPatrol);
-    public void PlayChase()        => PlayLooped(clipChase);
-    public void PlayStalk()        => PlayLooped(clipStalk);
-    public void PlaySpawn()        => PlayOneShot(clipSpawn);
-    public void PlayVanish()       => PlayOneShot(clipVanish);
-    public void PlayDistantScream()=> PlayOneShot(clipDistantScream);
-
-    public void StopAudio()
+    private void PlayGrowl()
     {
-        if (src.isPlaying) src.Stop();
+        if (growlClips == null || growlClips.Length == 0) return;
+        AudioClip clip = growlClips[Random.Range(0, growlClips.Length)];
+        src.PlayOneShot(clip, growlVolume);
     }
 
-    private void PlayLooped(AudioClip clip)
+    // ── Pasos ────────────────────────────────────────────────────────────────
+
+    public void UpdateFootsteps(float currentSpeed)
     {
-        if (clip == null) return;
-        if (src.clip == clip && src.isPlaying) return;
-        src.clip = clip;
-        src.loop = true;
-        src.Play();
+        if (currentSpeed < 0.1f)
+        {
+            stepTimer = 0f;
+            return;
+        }
+
+        float stepsPerSecond = baseStepsPerSecond * (currentSpeed / referenceSpeed);
+        float interval = 1f / Mathf.Max(stepsPerSecond, 0.01f);
+
+        stepTimer -= Time.deltaTime;
+        if (stepTimer <= 0f)
+        {
+            PlayFootstep();
+            stepTimer = interval;
+        }
     }
 
-    private void PlayOneShot(AudioClip clip)
+    private void PlayFootstep()
     {
-        if (clip == null) return;
-        src.PlayOneShot(clip);
+        if (footstepClips == null || footstepClips.Length == 0) return;
+        AudioClip clip = footstepClips[Random.Range(0, footstepClips.Length)];
+        src.PlayOneShot(clip, footstepVolume);
     }
 }
