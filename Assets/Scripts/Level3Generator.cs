@@ -21,6 +21,11 @@ public class Level3Generator : MonoBehaviour
     [Header("Player Audio")]
     public AudioClip[] playerFootstepClips;
 
+    [Header("Music")]
+    public bool playMusic = true;
+    public string musicResource = "Level3Music"; // Resources/Level3Music.mp3
+    [Range(0f, 1f)] public float musicVolume = 0.5f;
+
     [Header("Hints placement (drag HintsRoot in Scene to fit)")]
     // model has openings only on its long sides + closed X ends. To make the hall run
     // IN LINE with the corridor, rotate 90 and cut open the +X end so you enter lengthwise.
@@ -156,6 +161,7 @@ public class Level3Generator : MonoBehaviour
         if (bridgeGap) BuildBridge();
         AddFill(spawnPos + Vector3.up * 4f, 1.4f, 30f);
         MazeGenerator.NavMeshReady = true;
+        if (playMusic && Application.isPlaying) PlayMusic();
         if (spawnPlayer && haveSpawn && Application.isPlaying) SpawnPlayer();
     }
 
@@ -177,7 +183,7 @@ public class Level3Generator : MonoBehaviour
         var kill = new List<GameObject>();
         foreach (Transform t in transform)
             if (t.name == "Geometry" || t.name == "HintsRoot" || t.name == "PostFX" ||
-                t.name == "Fill" || t.name == "Player" || t.name == "Bridge" || t.name == "Neon")
+                t.name == "Fill" || t.name == "Player" || t.name == "Bridge" || t.name == "Neon" || t.name == "Music")
                 kill.Add(t.gameObject);
         foreach (var g in kill) { if (Application.isPlaying) Destroy(g); else DestroyImmediate(g); }
     }
@@ -409,6 +415,19 @@ public class Level3Generator : MonoBehaviour
         var l = go.AddComponent<Light>();
         l.type = LightType.Point; l.color = new Color(0.9f, 0.93f, 1f);
         l.intensity = intensity; l.range = range; l.shadows = LightShadows.None;
+    }
+
+    // looping 2D background music for the level
+    void PlayMusic()
+    {
+        var clip = Resources.Load<AudioClip>(musicResource);
+        if (clip == null) { Debug.LogWarning("Level3Generator: missing Resources/" + musicResource); return; }
+        var go = new GameObject("Music"); go.transform.SetParent(transform);
+        var src = go.AddComponent<AudioSource>();
+        src.clip = clip; src.loop = true; src.volume = musicVolume;
+        src.spatialBlend = 0f; // 2D, plays everywhere
+        src.playOnAwake = false;
+        src.Play();
     }
 
     void SpawnPlayer()

@@ -69,6 +69,20 @@ public class WinScreen : MonoBehaviour
             else
                 SceneManager.LoadScene(0);
         });
+
+        // --- Música de victoria (Resources/doin-what-i-want-lyrics.mp3) ---
+        var clip = Resources.Load<AudioClip>("doin-what-i-want-lyrics");
+        if (clip != null)
+        {
+            var musicaGO = new GameObject("MusicaVictoria");
+            var src = musicaGO.AddComponent<AudioSource>();
+            src.clip = clip;
+            src.loop = true;
+            src.volume = 0.7f;
+            src.spatialBlend = 0f;   // 2D
+            src.playOnAwake = false;
+            src.Play();
+        }
     }
 
     // --- Helpers para construir la interfaz ---
