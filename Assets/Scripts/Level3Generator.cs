@@ -317,13 +317,21 @@ public class Level3Generator : MonoBehaviour
 
     void Kill(Object o) { if (Application.isPlaying) Destroy(o); else DestroyImmediate(o); }
 
-    // model has no solid ceiling -> cap the whole level footprint at ceilingY
+    // model has no solid ceiling -> duplicate the floor tiles and raise them to ceilingY
     void BuildCeiling(Transform parent, BBox[] boxes)
     {
-        Extents(boxes, out Vector3 lo, out Vector3 hi);
-        Vector3 c = new Vector3((lo.x + hi.x) * 0.5f, ceilingY, (lo.z + hi.z) * 0.5f);
-        Vector3 s = new Vector3(hi.x - lo.x, 0.4f, hi.z - lo.z);
-        MakeBox(parent, c, s, ceilMat, false); // ceiling: no collider
+        float minY = float.MaxValue, maxY = float.MinValue;
+        foreach (var b in boxes) { float y = b.c[1]; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+        float midY = minY + (maxY - minY) * 0.5f;
+
+        foreach (var b in boxes)
+        {
+            Vector3 scl = new Vector3(b.s[0], b.s[1], b.s[2]) * worldScale;
+            bool flat = scl.y < scl.x && scl.y < scl.z;
+            if (!flat || b.c[1] > midY) continue;   // floor tiles only
+            Vector3 local = new Vector3(b.c[0] * worldScale, ceilingY, b.c[2] * worldScale);
+            MakeBox(parent, local, scl, floorMat, false); // ceiling = floor texture, no collider
+        }
     }
 
     void MakeBox(Transform parent, Vector3 local, Vector3 scl, Material mat, bool collide = true)
