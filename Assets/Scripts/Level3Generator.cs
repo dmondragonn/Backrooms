@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using Unity.AI.Navigation;
 
 // Level 3: rebuilds the REAL Rec Room "backstage" map from baked gltf box data
 // (one cube per mesh node, real position/scale). Clean materials, NOT a maze.
@@ -21,11 +20,6 @@ public class Level3Generator : MonoBehaviour
 
     [Header("Player Audio")]
     public AudioClip[] playerFootstepClips;
-
-    [Header("Music")]
-    public bool playMusic = true;
-    public string musicResource = "Level3Music"; // Resources/Level3Music.mp3
-    [Range(0f, 1f)] public float musicVolume = 0.5f;
 
     [Header("Hints placement (drag HintsRoot in Scene to fit)")]
     // model has openings only on its long sides + closed X ends. To make the hall run
@@ -69,9 +63,9 @@ public class Level3Generator : MonoBehaviour
     [Header("Lights (from model's White_Neon fixtures)")]
     public bool addLights = true;
     public float lightGrid = 8f;           // one point light per this grid cell of neon
-    public float lightRange = 10f;         // tighter range = less overlapping fill cost
+    public float lightRange = 13f;
     public float lightIntensity = 2.2f;
-    public int maxLights = 70;
+    public int maxLights = 120;
 
     [Header("Doors")]
     public bool removeDoors = true;        // delete the level door block (Brown_Particle_Board)
@@ -161,22 +155,7 @@ public class Level3Generator : MonoBehaviour
 
         if (bridgeGap) BuildBridge();
         AddFill(spawnPos + Vector3.up * 4f, 1.4f, 30f);
-
-        // bake NavMesh so enemies can path here (play mode only; edit regen stays fast)
-        if (Application.isPlaying)
-        {
-            var surface = GetComponent<NavMeshSurface>();
-            if (surface == null) surface = gameObject.AddComponent<NavMeshSurface>();
-            surface.collectObjects = CollectObjects.Children;
-            surface.overrideVoxelSize = true;
-            surface.voxelSize = 0.2f;
-            surface.overrideTileSize = true;
-            surface.tileSize = 256;
-            surface.BuildNavMesh();
-        }
-
         MazeGenerator.NavMeshReady = true;
-        if (playMusic && Application.isPlaying) PlayMusic();
         if (spawnPlayer && haveSpawn && Application.isPlaying) SpawnPlayer();
     }
 
@@ -198,7 +177,7 @@ public class Level3Generator : MonoBehaviour
         var kill = new List<GameObject>();
         foreach (Transform t in transform)
             if (t.name == "Geometry" || t.name == "HintsRoot" || t.name == "PostFX" ||
-                t.name == "Fill" || t.name == "Player" || t.name == "Bridge" || t.name == "Neon" || t.name == "Music")
+                t.name == "Fill" || t.name == "Player" || t.name == "Bridge" || t.name == "Neon")
                 kill.Add(t.gameObject);
         foreach (var g in kill) { if (Application.isPlaying) Destroy(g); else DestroyImmediate(g); }
     }
@@ -272,8 +251,7 @@ public class Level3Generator : MonoBehaviour
             Vector3 scl = new Vector3(bx.s[0], bx.s[1], bx.s[2]) * worldScale;
             Vector3 local = raw - pivot;
 
-            if (useCutBox && cutBoxes != null && cutBoxes.Length > 0 &&
-                InCut(parent.TransformPoint(local))) continue; // manual delete volume
+            if (useCutBox && InCut(parent.TransformPoint(local))) continue; // manual delete volume
 
             // model neon fixture -> emissive lamp box + a sparse real point light
             if (isLevel && neonMat >= 0 && bx.m == neonMat)
@@ -333,21 +311,13 @@ public class Level3Generator : MonoBehaviour
 
     void Kill(Object o) { if (Application.isPlaying) Destroy(o); else DestroyImmediate(o); }
 
-    // model has no solid ceiling -> duplicate the floor tiles and raise them to ceilingY
+    // model has no solid ceiling -> cap the whole level footprint at ceilingY
     void BuildCeiling(Transform parent, BBox[] boxes)
     {
-        float minY = float.MaxValue, maxY = float.MinValue;
-        foreach (var b in boxes) { float y = b.c[1]; if (y < minY) minY = y; if (y > maxY) maxY = y; }
-        float midY = minY + (maxY - minY) * 0.5f;
-
-        foreach (var b in boxes)
-        {
-            Vector3 scl = new Vector3(b.s[0], b.s[1], b.s[2]) * worldScale;
-            bool flat = scl.y < scl.x && scl.y < scl.z;
-            if (!flat || b.c[1] > midY) continue;   // floor tiles only
-            Vector3 local = new Vector3(b.c[0] * worldScale, ceilingY, b.c[2] * worldScale);
-            MakeBox(parent, local, scl, floorMat, false); // ceiling = floor texture, no collider
-        }
+        Extents(boxes, out Vector3 lo, out Vector3 hi);
+        Vector3 c = new Vector3((lo.x + hi.x) * 0.5f, ceilingY, (lo.z + hi.z) * 0.5f);
+        Vector3 s = new Vector3(hi.x - lo.x, 0.4f, hi.z - lo.z);
+        MakeBox(parent, c, s, ceilMat, false); // ceiling: no collider
     }
 
     void MakeBox(Transform parent, Vector3 local, Vector3 scl, Material mat, bool collide = true)
@@ -439,19 +409,6 @@ public class Level3Generator : MonoBehaviour
         var l = go.AddComponent<Light>();
         l.type = LightType.Point; l.color = new Color(0.9f, 0.93f, 1f);
         l.intensity = intensity; l.range = range; l.shadows = LightShadows.None;
-    }
-
-    // looping 2D background music for the level
-    void PlayMusic()
-    {
-        var clip = Resources.Load<AudioClip>(musicResource);
-        if (clip == null) { Debug.LogWarning("Level3Generator: missing Resources/" + musicResource); return; }
-        var go = new GameObject("Music"); go.transform.SetParent(transform);
-        var src = go.AddComponent<AudioSource>();
-        src.clip = clip; src.loop = true; src.volume = musicVolume;
-        src.spatialBlend = 0f; // 2D, plays everywhere
-        src.playOnAwake = false;
-        src.Play();
     }
 
     void SpawnPlayer()

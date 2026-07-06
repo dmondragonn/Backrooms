@@ -15,10 +15,6 @@ public class ElevatorIntro : MonoBehaviour
     public float holdTime = 0.9f;
     public float fallTime = 3f;
     public float doorTime = 1.6f;
-    public string openSound = "handprint";       // Resources/handprint.mp3, plays when doors open
-    [Range(0f, 1f)] public float openSoundVolume = 1f;
-    public string crashSound = "elevator-crash-sound-effect"; // plays during the ride, stops as doors open
-    [Range(0f, 1f)] public float crashSoundVolume = 1f;
 
     IEnumerator Start()
     {
@@ -29,7 +25,6 @@ public class ElevatorIntro : MonoBehaviour
         Vector3 eye = cam.localPosition;
 
         player.canMove = false;            // lock walking, but keep mouse-look free
-        AudioSource crash = null;
 
         // ascend: counter 2 -> 3, faint hum/bob
         SetFloor(2);
@@ -42,16 +37,6 @@ public class ElevatorIntro : MonoBehaviour
         SetFloor(3);
 
         cam.localPosition = eye;
-
-        // crash sfx starts here: the pause on 3, right before the fall; stops as doors open
-        var crashClip = Resources.Load<AudioClip>(crashSound);
-        if (crashClip != null)
-        {
-            crash = gameObject.AddComponent<AudioSource>();
-            crash.clip = crashClip; crash.spatialBlend = 0f; crash.volume = crashSoundVolume;
-            crash.loop = true; crash.playOnAwake = false; crash.Play();
-        }
-
         yield return new WaitForSeconds(holdTime); // stop at 3 for a beat
 
         // failure jolt: a sharp dip
@@ -75,8 +60,6 @@ public class ElevatorIntro : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f); // arrival beat
 
-        if (crash != null) crash.Stop();       // cut the crash right as doors begin to open
-
         // telescoping doors retract: inner panels travel farther than outer ones
         var l0 = new Vector3[leftPanels.Length];
         var r0 = new Vector3[rightPanels.Length];
@@ -91,15 +74,6 @@ public class ElevatorIntro : MonoBehaviour
                 rightPanels[i].localPosition = r0[i] + Vector3.right * panelSlides[i] * f;
             }
             yield return null;
-        }
-
-        // doors open -> play the handprint stinger (2D, once)
-        var clip = Resources.Load<AudioClip>(openSound);
-        if (clip != null)
-        {
-            var a = gameObject.AddComponent<AudioSource>();
-            a.clip = clip; a.spatialBlend = 0f; a.volume = openSoundVolume;
-            a.playOnAwake = false; a.Play();
         }
 
         player.canMove = true;             // hand walking back
