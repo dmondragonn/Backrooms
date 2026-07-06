@@ -24,7 +24,7 @@ public class Level3Generator : MonoBehaviour
     [Header("Music")]
     public bool playMusic = true;
     public string musicResource = "Level3Music"; // Resources/Level3Music.mp3
-    [Range(0f, 1f)] public float musicVolume = 0.5f;
+    [Range(0f, 1f)] public float musicVolume = 0.35f;
 
     [Header("Hints placement (drag HintsRoot in Scene to fit)")]
     // model has openings only on its long sides + closed X ends. To make the hall run

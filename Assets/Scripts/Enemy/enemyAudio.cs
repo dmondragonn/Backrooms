@@ -12,13 +12,13 @@ public class enemyAudio : MonoBehaviour
     [SerializeField] private AudioClip[] growlClips;
     [SerializeField] private float minGrowlDelay = 4f;   // silencio mínimo entre gruñidos
     [SerializeField] private float maxGrowlDelay = 10f;  // silencio máximo (= min para un valor fijo)
-    [Range(0f, 1f)] [SerializeField] private float growlVolume = 0.8f;
+    [Range(0f, 1f)] [SerializeField] private float growlVolume = 0.56f;
 
     [Header("Pasos (Footsteps)")]
     [SerializeField] private AudioClip[] footstepClips;
     [SerializeField] private float baseStepsPerSecond = 1f;    // pasos por segundo A referenceSpeed (bajo = lento)
     [SerializeField] private float referenceSpeed = 2.5f;       // usa tu patrolSpeed como referencia
-    [Range(0f, 1f)] [SerializeField] private float footstepVolume = 0.6f;
+    [Range(0f, 1f)] [SerializeField] private float footstepVolume = 0.42f;
     [Range(0f, 1f)] [SerializeField] private float limpUnevenness = 0.5f; // 0 = pasos parejos, 1 = cojera muy marcada
 
     [Header("Radios de audición")]
